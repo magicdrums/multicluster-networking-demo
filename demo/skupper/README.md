@@ -60,3 +60,30 @@ See `demo/VERSIONS.md` for install pins. Offline checks validate manifests only.
   ```
   Host publish for the connector remains `curl http://127.0.0.1:18080/`. Kind↔Kind voting stays the mesh wow.
 
+## Optional Network Observer (Phase C — talk UI)
+
+**Not** part of `make up`. VAN critical path works without it. Opt-in only.
+
+| Item | Contract |
+|------|----------|
+| Pin | Helm chart `oci://quay.io/skupper/helm/network-observer` **2.2.1** (see `demo/VERSIONS.md`) |
+| Site preference | Prefer **podman-edge**; Podman cannot host the Helm chart → print fallback and install on **kind-west** `skupper` (`SITE=kind-west`) |
+| Install + PF | `make ui-skupper` |
+| Validate | `make ui-skupper-check` (`curl -k -u …`) |
+| Access URL | Prefer `https://127.0.0.1:8443/` — helper prints `ACCESS_URL=…` (printed free port is the run contract) |
+| Auth | Chart auto-creates basic-auth (user `skupper` + random password). Printed **once** as `BASIC_AUTH_USER=` / `BASIC_AUTH_PASSWORD=` and saved under `demo/.run/ui-skupper-basic-auth` (**gitignored** — never commit) |
+| Exposure | Localhost HTTPS port-forward only — **never** CCM LoadBalancer |
+| Metrics / RAM | Bundled Prometheus is a **second** Prom next to Linkerd Viz — expect extra RAM on the talk laptop |
+| Tear down | `make ui-down` stops PF and `helm uninstall`s the release |
+
+```bash
+make ui-skupper
+# === Talk UI (phase C — Skupper network-observer) ===
+# ACCESS_URL=https://127.0.0.1:8443/
+# BASIC_AUTH_USER=skupper
+# BASIC_AUTH_PASSWORD=<printed-once>
+make ui-skupper-check
+```
+
+Values live in `demo/skupper/network-observer/values.yaml` (no password in git).
+
