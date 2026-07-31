@@ -101,6 +101,12 @@ main() {
     [[ -n "${target}" ]] && targets+=("${target}")
   done <<<"${resolved}"
 
+  # Best-effort Phase B/C UI teardown before destroying sites (never fatal).
+  if [[ -x "${SCRIPT_DIR}/ui-down.sh" ]]; then
+    printf 'down: best-effort ui-down (non-fatal)\n'
+    "${SCRIPT_DIR}/ui-down.sh" || printf 'down: ui-down returned non-zero — continuing teardown\n' >&2
+  fi
+
   printf 'down: destroying demo targets only: %s\n' "${targets[*]}"
   # Always attempt demo-owned CCM cleanup if we tore Kind sites, even when a
   # tear_down_target fails under set -e (otherwise host LB process can leak).
