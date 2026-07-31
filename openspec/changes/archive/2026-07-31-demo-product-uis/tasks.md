@@ -48,15 +48,23 @@ Delivery locked: **feature-branch-chain** (same as `multicluster-connectivity-de
 
 ## Phase 4: C — Skupper observer
 
-- [ ] 4.1 `demo/skupper/network-observer/` Helm values (chart `oci://quay.io/skupper/helm/network-observer` **2.2.1**; no password in git)
-- [ ] 4.2 Pin observer **2.2.1** in `demo/VERSIONS.md`; RAM/2nd-Prom note
-- [ ] 4.3 `ui-skupper.sh`: prefer podman-edge; fallback west `skupper` (`SITE=kind-west`); HTTPS PF prefer 8443; print URL + basic-auth once (`demo/.run/`)
-- [ ] 4.4 `ui-skupper-check`: `curl -k -u …`; echo URL (+ auth hint); fail if down
-- [ ] 4.5 `demo/skupper/README.md`: preference, PF, auth, RAM, fallback
+- [x] 4.1 `demo/skupper/network-observer/` Helm values (chart `oci://quay.io/skupper/helm/network-observer` **2.2.1**; no password in git)
+- [x] 4.2 Pin observer **2.2.1** in `demo/VERSIONS.md`; RAM/2nd-Prom note
+- [x] 4.3 `ui-skupper.sh`: prefer podman-edge; fallback west `skupper` (`SITE=kind-west`); HTTPS PF prefer 8443; print URL + basic-auth once (`demo/.run/`)
+- [x] 4.4 `ui-skupper-check`: `curl -k -u …`; echo URL (+ auth hint); fail if down
+- [x] 4.5 `demo/skupper/README.md`: preference, PF, auth, RAM, fallback
 
 ## Phase 5: Teardown + threat checks
 
-- [ ] 5.1 RED: (1) `ui-down` leaves CCM ports (2) bad CLUSTER aborts (3) `up` has no `ui-` (4) kills only recorded PF pids
-- [ ] 5.2 `ui-down.sh`: stop PF/uninstall Viz+observer only; print what stopped; A=docs reminder
-- [ ] 5.3 GREEN: 5.1 pass; `down.sh` best-effort non-fatal `ui-down`
-- [ ] 5.4 Rehearsal: A→B→C print locked URLs (or printed free-port contracts); `make ui-down` clears B/C
+- [x] 5.1 RED: (1) `ui-down` leaves CCM ports (2) bad CLUSTER aborts (3) `up` has no `ui-` (4) kills only recorded PF pids
+- [x] 5.2 `ui-down.sh`: stop PF/uninstall Viz+observer only; print what stopped; A=docs reminder
+- [x] 5.3 GREEN: 5.1 pass; `down.sh` best-effort non-fatal `ui-down`
+- [x] 5.4 Rehearsal: A→B→C print locked URLs (or printed free-port contracts); `make ui-down` clears B/C
+
+## Phase 6: Verify PARTIAL evidence (offline asserts)
+
+- [x] 6.1 Foundation: README runbook greps for hosts + Phase A ACCESS_URL
+- [x] 6.2 Linkerd: skip-namespaces + README still disable inject after Viz docs
+- [x] 6.3 Skupper: `up` / `demo-skupper` / `check-skupper` have no ui-skupper dep; README observer opt-in
+- [x] 6.4 Foundation: RateLimit stays `make demo-ratelimit` / HTTP 429; README bans Kuadrant product UI
+- [x] 6.5 Foundation: Failover stays `make failover` / DNS dig path (no product UI dashboard)

@@ -76,6 +76,8 @@ AuthPolicy / API-key demo: **MAY** (bonus only) — deferred stub in `demo/kuadr
 | Sites | `kind-west` (hub `linkAccess`), `kind-east`, `podman-edge` | Kind sites in NS `skupper` |
 | Surface | voting `AttachedConnector` + `voting-van` Listener; Podman `legacy-emoji` | Not full emojivoto on Podman |
 | legacy-emoji image | `localhost/legacy-emoji:demo` | Host publish `127.0.0.1:18080` |
+| Network Observer (opt-in) | Helm `oci://quay.io/skupper/helm/network-observer` **2.2.1** | Prefer **podman-edge**; Helm needs Kubernetes → fallback west `skupper` via `make ui-skupper`; **not** in `make up`; HTTPS PF prefer `https://127.0.0.1:8443/`; basic-auth once in `demo/.run/` (gitignored); never CCM LB |
+| Observer metrics | Bundled Prometheus (2nd Prom alongside Linkerd Viz) | Accept extra RAM on talk laptop; ephemeral storage in `demo/skupper/network-observer/values.yaml` |
 
 ## Host sysctl
 

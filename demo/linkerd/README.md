@@ -34,7 +34,7 @@ Do not inject Gateway or Kuadrant control-plane pods.
 | Exposure | Localhost port-forward only — **never** CCM LoadBalancer |
 | Metrics | Bundled Prometheus OK |
 | Skip-inject | Unchanged — Viz must not alter N-S / Skupper inject policy |
-| Tear down PF | `make ui-down` (stops dashboard PF; full Viz uninstall in later PR) |
+| Tear down | `make ui-down` (stops dashboard PF and uninstalls Viz) |
 
 ```bash
 make ui-linkerd
