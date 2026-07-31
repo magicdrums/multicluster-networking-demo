@@ -1,0 +1,11 @@
+# Hub Kind site — accepts incoming links from kind-east and podman-edge.
+apiVersion: skupper.io/v2alpha1
+kind: Site
+metadata:
+  name: kind-west
+  namespace: skupper
+  labels:
+    demo.kcd.ar/plane: skupper
+    demo.kcd.ar/site: kind-west
+spec:
+  linkAccess: default

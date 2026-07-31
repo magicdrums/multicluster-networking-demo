@@ -1,0 +1,31 @@
+# Namespaces that MUST NOT receive Linkerd sidecars (N-S / control plane / Skupper).
+# envoy-gateway-system is Helm-created — annotated in up.sh after EG install.
+# kuadrant-system also declares inject=disabled in demo/kuadrant/kuadrant.yaml.
+# skupper NS is also declared in demo/skupper/namespace.yaml.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kuadrant-coredns
+  labels:
+    linkerd.io/inject: disabled
+  annotations:
+    linkerd.io/inject: disabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-system
+  labels:
+    linkerd.io/inject: disabled
+  annotations:
+    linkerd.io/inject: disabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: skupper
+  labels:
+    linkerd.io/inject: disabled
+  annotations:
+    linkerd.io/inject: disabled

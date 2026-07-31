@@ -1,0 +1,5 @@
+# Issued AccessTokens and backups — never commit grant CA/code material.
+*.token
+*.token.*
+*.bak
+!.gitkeep

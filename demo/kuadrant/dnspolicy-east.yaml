@@ -1,0 +1,21 @@
+# DNSPolicy on kind-east (secondary). Applied instead of dnspolicy.yaml on east.
+---
+apiVersion: kuadrant.io/v1
+kind: DNSPolicy
+metadata:
+  name: emojivoto-dns
+  namespace: gateway-system
+  labels:
+    demo.kcd.ar/wow: coredns-ha
+    demo.kcd.ar/site: east
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: demo
+  providerRefs:
+    - name: coredns-credentials
+  loadBalancing:
+    weight: 50
+    geo: GEO-default
+    defaultGeo: false

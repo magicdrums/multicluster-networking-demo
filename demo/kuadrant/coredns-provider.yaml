@@ -1,0 +1,16 @@
+# CoreDNS DNS provider secret (no cloud credentials). Zone: demo.local.
+# Applied in gateway-system so DNSPolicy can reference it via providerRefs.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: coredns-credentials
+  namespace: gateway-system
+  labels:
+    kuadrant.io/default-provider: "true"
+    demo.kcd.ar/plane: north-south
+type: kuadrant.io/coredns
+stringData:
+  ZONES: demo.local
+  # Optional NS list for active-passive DNS Groups; Kind dig uses CoreDNS Service IP.
+  NAMESERVERS: ns1.demo.local,ns2.demo.local

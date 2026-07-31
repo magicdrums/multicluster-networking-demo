@@ -1,0 +1,14 @@
+# Envoy Gateway Helm values for Kuadrant (N-S).
+# Chart: oci://docker.io/envoyproxy/gateway-helm — pin in demo/VERSIONS.md (EG v1.7.0).
+# Kuadrant requires EnvoyPatchPolicy so Limitador/Authorino Wasm can attach.
+config:
+  envoyGateway:
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    provider:
+      type: Kubernetes
+    logging:
+      level:
+        default: info
+    extensionApis:
+      enableEnvoyPatchPolicy: true

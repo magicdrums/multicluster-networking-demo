@@ -1,0 +1,14 @@
+# Gentle AI / local agent state
+.atl/
+
+# Codegraph local index
+.codegraph/
+
+# Demo runtime (CCM pid/log/owned marker)
+demo/.run/*
+!demo/.run/.gitkeep
+
+# Editor / OS noise
+*.swp
+*~
+.DS_Store

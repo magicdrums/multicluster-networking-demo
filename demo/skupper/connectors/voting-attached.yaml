@@ -1,0 +1,13 @@
+# AttachedConnector in the app namespace (cluster-scoped controller required).
+apiVersion: skupper.io/v2alpha1
+kind: AttachedConnector
+metadata:
+  name: voting
+  namespace: emojivoto
+  labels:
+    demo.kcd.ar/plane: skupper
+    demo.kcd.ar/service: voting
+spec:
+  siteNamespace: skupper
+  selector: app=voting-svc
+  port: 8080

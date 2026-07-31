@@ -1,0 +1,11 @@
+# Meshed demo app namespace — Linkerd injects all pods here.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: emojivoto
+  labels:
+    linkerd.io/inject: enabled
+    demo.kcd.ar/plane: east-west
+  annotations:
+    linkerd.io/inject: enabled

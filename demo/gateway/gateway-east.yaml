@@ -1,0 +1,55 @@
+# East Gateway — listener 8081 so cloud-provider-kind host port-mapping
+# does not collide with kind-west's published :8080 (rootless Podman).
+# GatewayClass "eg" is applied from gatewayclass.yaml (Helm does NOT create it).
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-system
+  labels:
+    linkerd.io/inject: disabled
+  annotations:
+    linkerd.io/inject: disabled
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: demo
+  namespace: gateway-system
+  labels:
+    kuadrant.io/gateway: "true"
+    demo.kcd.ar/plane: north-south
+    demo.kcd.ar/site: kind-east
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      # Distinct from west :8080 — CCM --enable-lb-port-mapping binds host ports 1:1.
+      port: 8081
+      hostname: emojivoto.demo.local
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: emojivoto-web
+  namespace: emojivoto
+  labels:
+    demo.kcd.ar/plane: north-south
+spec:
+  parentRefs:
+    - name: demo
+      namespace: gateway-system
+  hostnames:
+    - emojivoto.demo.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: web-svc
+          port: 80

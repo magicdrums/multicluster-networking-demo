@@ -1,0 +1,20 @@
+# Local Corefile only — install uses upstream dns-operator kustomize, then replaces this ConfigMap.
+# See demo/scripts/up.sh (install_coredns) and demo/VERSIONS.md.
+demo.local {
+    debug
+    errors
+    log
+    health {
+        lameduck 5s
+    }
+    ready
+    geoip GeoLite2-City-demo.mmdb {
+        edns-subnet
+    }
+    metadata
+    transfer {
+        to *
+    }
+    kuadrant
+    prometheus 0.0.0.0:9153
+}

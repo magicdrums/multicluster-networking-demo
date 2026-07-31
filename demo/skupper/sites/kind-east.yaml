@@ -1,0 +1,9 @@
+# Spoke Kind site — redeems token from kind-west (no linkAccess required).
+apiVersion: skupper.io/v2alpha1
+kind: Site
+metadata:
+  name: kind-east
+  namespace: skupper
+  labels:
+    demo.kcd.ar/plane: skupper
+    demo.kcd.ar/site: kind-east

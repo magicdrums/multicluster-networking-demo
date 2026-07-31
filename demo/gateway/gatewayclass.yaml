@@ -1,0 +1,10 @@
+# GatewayClass for Envoy Gateway — NOT created by the Helm chart (must apply separately).
+# controllerName must match config.envoyGateway.gateway.controllerName in values-eg.yaml.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+  labels:
+    demo.kcd.ar/plane: north-south
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller

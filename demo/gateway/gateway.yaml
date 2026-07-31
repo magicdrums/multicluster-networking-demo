@@ -1,0 +1,55 @@
+# Demo north-south Gateway + HTTPRoute → emojivoto web-svc (both Kind sites).
+# GatewayClass "eg" is applied from gatewayclass.yaml (Helm does NOT create it).
+# emojivoto Namespace (with Linkerd inject) is owned by demo/apps/emojivoto/namespace.yaml.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-system
+  labels:
+    linkerd.io/inject: disabled
+  annotations:
+    linkerd.io/inject: disabled
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: demo
+  namespace: gateway-system
+  labels:
+    kuadrant.io/gateway: "true"
+    demo.kcd.ar/plane: north-south
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      # Port 8080 (not 80): cloud-provider-kind on rootless Podman cannot bind host :80.
+      port: 8080
+      hostname: emojivoto.demo.local
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: emojivoto-web
+  namespace: emojivoto
+  labels:
+    demo.kcd.ar/plane: north-south
+spec:
+  parentRefs:
+    - name: demo
+      namespace: gateway-system
+  hostnames:
+    - emojivoto.demo.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        # Official emojivoto Service name (BuoyantIO v11).
+        - name: web-svc
+          port: 80

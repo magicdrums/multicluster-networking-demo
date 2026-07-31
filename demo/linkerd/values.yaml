@@ -1,0 +1,7 @@
+# Linkerd control-plane values for Kind + Podman (edge-26.6.3 CLI).
+# Applied via: linkerd install -f demo/linkerd/values.yaml
+# Keep in sync with demo/VERSIONS.md.
+
+# Kind (especially Podman provider) needs root proxy-init for iptables.
+proxyInit:
+  runAsRoot: true

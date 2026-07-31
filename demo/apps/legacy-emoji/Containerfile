@@ -1,0 +1,5 @@
+# Minimal image for podman-edge legacy-emoji (not full emojivoto).
+FROM docker.io/library/python:3.12-alpine
+COPY server.py /app/server.py
+EXPOSE 8080
+CMD ["python3", "/app/server.py"]

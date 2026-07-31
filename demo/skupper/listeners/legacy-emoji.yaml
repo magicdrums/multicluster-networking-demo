@@ -1,0 +1,14 @@
+# Kind-side listener for Podman legacy-emoji (service legacy-emoji.skupper:8080).
+apiVersion: skupper.io/v2alpha1
+kind: Listener
+metadata:
+  name: legacy-emoji
+  namespace: skupper
+  labels:
+    demo.kcd.ar/plane: skupper
+    demo.kcd.ar/service: legacy-emoji
+spec:
+  host: legacy-emoji
+  port: 8080
+  routingKey: legacy-emoji
+  type: tcp

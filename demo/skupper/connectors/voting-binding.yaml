@@ -1,0 +1,12 @@
+# Bind AttachedConnector into the Skupper site namespace (routing key voting).
+apiVersion: skupper.io/v2alpha1
+kind: AttachedConnectorBinding
+metadata:
+  name: voting
+  namespace: skupper
+  labels:
+    demo.kcd.ar/plane: skupper
+    demo.kcd.ar/service: voting
+spec:
+  connectorNamespace: emojivoto
+  routingKey: voting

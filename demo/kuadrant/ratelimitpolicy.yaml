@@ -1,0 +1,20 @@
+# Tight RateLimitPolicy — primary N-S wow (visible 429 under make demo-ratelimit).
+# limit 3 / 10s so a short curl burst trips without interactive IdP.
+---
+apiVersion: kuadrant.io/v1
+kind: RateLimitPolicy
+metadata:
+  name: emojivoto-rlp
+  namespace: gateway-system
+  labels:
+    demo.kcd.ar/wow: ratelimit
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: demo
+  limits:
+    "demo-wow":
+      rates:
+        - limit: 3
+          window: 10s

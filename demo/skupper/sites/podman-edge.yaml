@@ -1,0 +1,9 @@
+# Podman edge site — hybrid non-K8s participant (applied via skupper system apply).
+apiVersion: skupper.io/v2alpha1
+kind: Site
+metadata:
+  name: podman-edge
+  namespace: podman-edge
+  labels:
+    demo.kcd.ar/plane: skupper
+    demo.kcd.ar/site: podman-edge

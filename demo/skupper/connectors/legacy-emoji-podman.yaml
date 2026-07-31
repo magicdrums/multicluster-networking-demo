@@ -1,0 +1,14 @@
+# Podman connector for legacy-emoji (host publish 127.0.0.1:18080 → container 8080).
+apiVersion: skupper.io/v2alpha1
+kind: Connector
+metadata:
+  name: legacy-emoji
+  namespace: podman-edge
+  labels:
+    demo.kcd.ar/plane: skupper
+    demo.kcd.ar/service: legacy-emoji
+spec:
+  host: 127.0.0.1
+  port: 18080
+  routingKey: legacy-emoji
+  type: tcp

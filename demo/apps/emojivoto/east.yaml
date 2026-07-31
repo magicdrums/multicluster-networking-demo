@@ -1,0 +1,70 @@
+# Voting replica on kind-east (Skupper will link west↔east in Phase 4).
+# Voting is self-contained (no emoji dependency for the gRPC voting API).
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: voting
+  namespace: emojivoto
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: voting-svc
+  namespace: emojivoto
+  labels:
+    demo.kcd.ar/plane: east-west
+    demo.kcd.ar/role: voting-replica
+spec:
+  ports:
+    - name: grpc
+      port: 8080
+      targetPort: 8080
+    - name: prom
+      port: 8801
+      targetPort: 8801
+  selector:
+    app: voting-svc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: voting
+  namespace: emojivoto
+  labels:
+    app.kubernetes.io/name: voting
+    app.kubernetes.io/part-of: emojivoto
+    app.kubernetes.io/version: v11
+    demo.kcd.ar/plane: east-west
+    demo.kcd.ar/role: voting-replica
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: voting-svc
+      version: v11
+  template:
+    metadata:
+      labels:
+        app: voting-svc
+        version: v11
+      annotations:
+        linkerd.io/inject: enabled
+    spec:
+      serviceAccountName: voting
+      containers:
+        - name: voting-svc
+          image: ghcr.io/buoyantio/emojivoto-voting-svc:v11
+          env:
+            - name: GRPC_PORT
+              value: "8080"
+            - name: PROM_PORT
+              value: "8801"
+          ports:
+            - containerPort: 8080
+              name: grpc
+            - containerPort: 8801
+              name: prom
+          resources:
+            requests:
+              cpu: 100m

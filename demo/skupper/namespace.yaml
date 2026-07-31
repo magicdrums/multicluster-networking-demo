@@ -1,0 +1,10 @@
+# Dedicated Skupper site namespace — never mesh-inject routers.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: skupper
+  labels:
+    demo.kcd.ar/plane: skupper
+    linkerd.io/inject: disabled
+  annotations:
+    linkerd.io/inject: disabled

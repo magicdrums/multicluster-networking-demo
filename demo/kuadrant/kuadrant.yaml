@@ -1,0 +1,16 @@
+# Kuadrant operand (Limitador + Authorino). Applied after kuadrant-operator Helm install.
+# Operator chart pin: kuadrant/kuadrant-operator 1.5.2 — see demo/VERSIONS.md.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kuadrant-system
+  labels:
+    linkerd.io/inject: disabled
+---
+apiVersion: kuadrant.io/v1beta1
+kind: Kuadrant
+metadata:
+  name: kuadrant
+  namespace: kuadrant-system
+spec: {}
