@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Focused foundation suite for demo-product-uis WU1 (threat + URL contract).
-# Offline: no Kind required.
+# Offline suite: UI foundation + Phase A via make ui / lib/ (Kind-free).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,8 +8,9 @@ MAKEFILE="${ROOT}/Makefile"
 README="${ROOT}/README.md"
 KUADRANT_README="${ROOT}/demo/kuadrant/README.md"
 UI_COMMON="${SCRIPT_DIR}/ui-common.sh"
-UI_APP="${SCRIPT_DIR}/ui-app.sh"
-UI_APP_CHECK="${SCRIPT_DIR}/ui-app-check.sh"
+UI_SH="${SCRIPT_DIR}/ui.sh"
+PHASE_A="${SCRIPT_DIR}/ui/_phase_a.sh"
+LIB_COMMON="${SCRIPT_DIR}/lib/common.sh"
 
 pass=0
 fail=0
@@ -121,7 +121,32 @@ assert_file_contains() {
   fi
 }
 
-# --- 1.1 RED: make up has no ui-* deps ---
+assert_file_lacks() {
+  local desc="$1"
+  local needle="$2"
+  local file="$3"
+  if grep -qF "${needle}" "${file}"; then
+    printf 'FAIL: %s (unexpected %q in %s)\n' "${desc}" "${needle}" "${file}"
+    fail=$((fail + 1))
+  else
+    printf 'PASS: %s\n' "${desc}"
+    pass=$((pass + 1))
+  fi
+}
+
+assert_file_exists() {
+  local desc="$1"
+  local file="$2"
+  if [[ -f "${file}" ]]; then
+    printf 'PASS: %s\n' "${desc}"
+    pass=$((pass + 1))
+  else
+    printf 'FAIL: %s (missing %s)\n' "${desc}" "${file}"
+    fail=$((fail + 1))
+  fi
+}
+
+# --- make up has no ui-* deps ---
 up_recipe="$(awk '/^up:/{flag=1; next} /^[^[:space:]#]/{flag=0} flag' "${MAKEFILE}")"
 if grep -E 'ui-' <<<"${up_recipe}" >/dev/null 2>&1; then
   printf 'FAIL: Makefile up recipe references ui-*\n'
@@ -132,16 +157,63 @@ else
   pass=$((pass + 1))
 fi
 
-# Phony / help wiring must list ui targets but up itself must stay lean
-if ! grep -qE '^ui-app:' "${MAKEFILE}"; then
-  printf 'FAIL: Makefile missing ui-app target\n'
+# Public surface: ui + ui-down; refuse old Make names
+if grep -qE '^ui:' "${MAKEFILE}"; then
+  printf 'PASS: Makefile has ui target\n'
+  pass=$((pass + 1))
+else
+  printf 'FAIL: Makefile missing ui target\n'
+  fail=$((fail + 1))
+fi
+
+if grep -qE '^ui-down:' "${MAKEFILE}"; then
+  printf 'PASS: Makefile has ui-down target\n'
+  pass=$((pass + 1))
+else
+  printf 'FAIL: Makefile missing ui-down target\n'
+  fail=$((fail + 1))
+fi
+
+for old in ui-app ui-app-check ui-linkerd ui-linkerd-check ui-skupper ui-skupper-check talk-up; do
+  if grep -qE "^${old}:" "${MAKEFILE}"; then
+    printf 'FAIL: Makefile still has removed target %s\n' "${old}"
+    fail=$((fail + 1))
+  else
+    printf 'PASS: Makefile hard-cut removes %s\n' "${old}"
+    pass=$((pass + 1))
+  fi
+done
+
+help_out="$(make -C "${ROOT}" help 2>&1)"
+if grep -qE '^[[:space:]]*make ui[[:space:]]' <<<"${help_out}" && \
+   grep -qE '^[[:space:]]*make ui-down[[:space:]]' <<<"${help_out}"; then
+  printf 'PASS: make help lists ui and ui-down\n'
+  pass=$((pass + 1))
+else
+  printf 'FAIL: make help missing ui / ui-down\n'
+  fail=$((fail + 1))
+fi
+# Match public Make target lines only (not test-ui-linkerd / test-ui-skupper suite names).
+if grep -Eiq 'make ui-app|make ui-linkerd|make ui-skupper|make talk-up' <<<"${help_out}"; then
+  printf 'FAIL: make help still lists old UI names\n'
   fail=$((fail + 1))
 else
-  printf 'PASS: Makefile has ui-app target\n'
+  printf 'PASS: make help omits old per-phase UI names\n'
   pass=$((pass + 1))
 fi
 
-# --- 1.3 RED→GREEN: refuse reserved ports ---
+assert_file_exists "ui.sh dispatcher present" "${UI_SH}"
+assert_file_exists "lib/common.sh present" "${LIB_COMMON}"
+assert_file_exists "phase A private script present" "${PHASE_A}"
+if [[ -e "${SCRIPT_DIR}/ui-app.sh" || -e "${SCRIPT_DIR}/ui-app-check.sh" ]]; then
+  printf 'FAIL: old ui-app*.sh still present\n'
+  fail=$((fail + 1))
+else
+  printf 'PASS: old ui-app*.sh removed\n'
+  pass=$((pass + 1))
+fi
+
+# --- refuse reserved ports ---
 # shellcheck disable=SC1091
 source "${UI_COMMON}"
 
@@ -157,49 +229,112 @@ assert_fails_with \
   "refusing reserved|reserved demo port" \
   bash -c "source '${UI_COMMON}'; demo_pick_free_port 8080"
 
-# Free preferred (non-reserved) should succeed when unbound — use high ephemeral
 assert_ok \
   "demo_pick_free_port accepts preferred 50750 when free-or-next" \
   bash -c "source '${UI_COMMON}'; p=\$(demo_pick_free_port 50750); [[ -n \"\$p\" ]] && ! demo_ui_is_reserved_port \"\$p\""
 
-# --- bad CLUSTER / never kind-cluster ---
+# --- bad CLUSTER / never kind-cluster (Phase A via private PHASE=) ---
 assert_fails_with \
-  "ui-app refuses CLUSTER=kind-cluster" \
+  "ui PHASE=a refuses CLUSTER=kind-cluster" \
   "refusing|allowlist|kind-cluster" \
-  env CLUSTER=kind-cluster "${UI_APP}"
+  env CLUSTER=kind-cluster PHASE=a UI_SKIP_PROBE=1 "${UI_SH}"
 
 assert_fails_with \
-  "ui-app aborts unknown CLUSTER" \
+  "ui PHASE=a aborts unknown CLUSTER" \
   "refusing|allowlist" \
-  env CLUSTER=evil-cluster "${UI_APP}"
+  env CLUSTER=evil-cluster PHASE=a UI_SKIP_PROBE=1 "${UI_SH}"
 
 assert_fails_with \
   "ui-down refuses CLUSTER=kind-cluster" \
   "refusing|allowlist|kind-cluster" \
   env CLUSTER=kind-cluster "${SCRIPT_DIR}/ui-down.sh"
 
-# --- 2.1 ACCESS_URL contract ---
+# --- Phase A ACCESS_URL contract (offline: skip live probe) ---
 assert_output_contains \
-  "ui-app prints ACCESS_URL west contract" \
+  "phase A prints ACCESS_URL west contract" \
   "ACCESS_URL=http://emojivoto.demo.local:8080/" \
-  "${UI_APP}"
+  env PHASE=a UI_SKIP_PROBE=1 "${UI_SH}"
 
 assert_output_lacks \
-  "ui-app does not prescribe bare IP URL without Host" \
+  "phase A does not prescribe bare IP URL without Host" \
   "ACCESS_URL=http://127.0.0.1:8080/" \
-  "${UI_APP}"
+  env PHASE=a UI_SKIP_PROBE=1 "${UI_SH}"
 
 assert_output_contains \
-  "ui-app mentions /etc/hosts" \
+  "phase A mentions /etc/hosts" \
   "emojivoto.demo.local" \
-  "${UI_APP}"
+  env PHASE=a UI_SKIP_PROBE=1 "${UI_SH}"
 
-# make -n wiring
 assert_ok \
-  "make -n ui-app-check dry-runs" \
-  make -C "${ROOT}" -n ui-app-check
+  "make -n ui dry-runs" \
+  make -C "${ROOT}" -n ui
 
-# --- Verify PARTIAL close: Runbook lists hosts and app URL ---
+# Fail-fast contract offline: B then C order; set -e; no continue-on-error
+assert_file_contains \
+  "ui.sh uses set -e fail-fast" \
+  "set -euo pipefail" \
+  "${UI_SH}"
+if grep -q 'run_phase a' "${UI_SH}" && grep -q 'run_phase b' "${UI_SH}" && grep -q 'run_phase c' "${UI_SH}"; then
+  printf 'PASS: ui.sh runs A then B then C\n'
+  pass=$((pass + 1))
+else
+  printf 'FAIL: ui.sh missing sequential A/B/C\n'
+  fail=$((fail + 1))
+fi
+# Simulate mid-B fail ⇒ C not started (stub PATH)
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "${tmpdir}"' EXIT
+cat >"${tmpdir}/_phase_a.sh" <<'EOF'
+#!/usr/bin/env bash
+printf 'stub A ACCESS_URL=http://emojivoto.demo.local:8080/\n'
+EOF
+cat >"${tmpdir}/_phase_b.sh" <<'EOF'
+#!/usr/bin/env bash
+printf 'stub B failing\n' >&2
+exit 7
+EOF
+cat >"${tmpdir}/_phase_c.sh" <<'EOF'
+#!/usr/bin/env bash
+printf 'stub C should not run\n' >"${UI_FAILFAST_MARKER}"
+exit 0
+EOF
+chmod +x "${tmpdir}"/_phase_*.sh
+marker="${tmpdir}/c-ran"
+set +e
+out="$(
+  UI_DIR="${tmpdir}" UI_FAILFAST_MARKER="${marker}" bash -c '
+    set -euo pipefail
+    SCRIPT_DIR="'"${SCRIPT_DIR}"'"
+    UI_DIR="'"${tmpdir}"'"
+    PHASE=all
+    run_phase() {
+      local letter="$1"
+      local script="${UI_DIR}/_phase_${letter}.sh"
+      printf "ui: starting Phase %s\n" "${letter}"
+      "${script}"
+    }
+    run_phase a
+    run_phase b
+    run_phase c
+  ' 2>&1
+)"
+rc=$?
+set -e
+if [[ "${rc}" -eq 0 ]]; then
+  printf 'FAIL: fail-fast stub expected non-zero (got 0)\n'
+  fail=$((fail + 1))
+elif [[ -f "${marker}" ]]; then
+  printf 'FAIL: fail-fast stub started Phase C after B failure\n'
+  fail=$((fail + 1))
+elif ! grep -q 'stub B failing' <<<"${out}"; then
+  printf 'FAIL: fail-fast stub missing B failure output\n'
+  fail=$((fail + 1))
+else
+  printf 'PASS: fail-fast B failure skips Phase C\n'
+  pass=$((pass + 1))
+fi
+
+# --- README / docs contracts ---
 assert_file_contains \
   "README documents /etc/hosts for app access" \
   "/etc/hosts" \
@@ -220,8 +355,6 @@ assert_file_contains \
   "README marks Phase A as Browser / opt-in" \
   "Phase A" \
   "${README}"
-
-# --- Verify PARTIAL close: RateLimit stays HTTP without product UI ---
 assert_file_contains \
   "README bans Kuadrant Grafana as talk UI" \
   "Kuadrant Grafana" \
@@ -247,7 +380,6 @@ assert_file_contains \
   "429" \
   "${KUADRANT_README}"
 
-# --- Verify PARTIAL close: Failover stays DNS/HTTP without product UI ---
 assert_file_contains \
   "README failover path is make failover" \
   "make failover" \
