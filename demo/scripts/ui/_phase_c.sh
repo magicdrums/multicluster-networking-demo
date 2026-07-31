@@ -36,18 +36,7 @@ demo_ui_site_file() {
 }
 
 stop_existing_pf() {
-  local pidfile pid
-  pidfile="$(demo_ui_pidfile "${PID_NAME}")"
-  if [[ ! -f "${pidfile}" ]]; then
-    return 0
-  fi
-  pid="$(tr -d '[:space:]' <"${pidfile}" || true)"
-  if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
-    printf 'ui phase C: stopping previous observer PF pid %s\n' "${pid}"
-    kill "${pid}" 2>/dev/null || true
-    wait "${pid}" 2>/dev/null || true
-  fi
-  rm -f "${pidfile}"
+  demo_ui_stop_pf "Skupper network-observer" "${PID_NAME}" "${PREFERRED_PORT}" "${URL_FILE_NAME}" || true
 }
 
 # Prefer podman-edge when explicitly forced or as first choice; Helm needs Kind.
@@ -168,7 +157,7 @@ kubectl --context "${ctx}" -n "${NAMESPACE}" port-forward \
   --address 127.0.0.1 \
   >"$(demo_ui_run_dir)/ui-skupper-observer.log" 2>&1 &
 pf_pid=$!
-printf '%s\n' "${pf_pid}" >"$(demo_ui_pidfile "${PID_NAME}")"
+demo_ui_record_pf "${PID_NAME}" "${pf_pid}" "${port}" || exit 1
 printf '%s\n' "${access_url}" >"$(demo_ui_access_url_file)"
 
 ready=0

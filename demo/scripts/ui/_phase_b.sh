@@ -28,18 +28,7 @@ demo_ui_access_url_file() {
 }
 
 stop_existing_dashboard() {
-  local pidfile pid
-  pidfile="$(demo_ui_pidfile "${PID_NAME}")"
-  if [[ ! -f "${pidfile}" ]]; then
-    return 0
-  fi
-  pid="$(tr -d '[:space:]' <"${pidfile}" || true)"
-  if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
-    printf 'ui phase B: stopping previous dashboard pid %s\n' "${pid}"
-    kill "${pid}" 2>/dev/null || true
-    wait "${pid}" 2>/dev/null || true
-  fi
-  rm -f "${pidfile}"
+  demo_ui_stop_pf "Linkerd Viz dashboard" "${PID_NAME}" "${PREFERRED_PORT}" "${URL_FILE_NAME}" || true
 }
 
 cluster="$(demo_ui_resolve_cluster_or_abort)" || exit 1
@@ -92,7 +81,7 @@ linkerd --context "${ctx}" viz dashboard \
   --wait "${VIZ_WAIT}" \
   >"$(demo_ui_run_dir)/ui-linkerd-dashboard.log" 2>&1 &
 dash_pid=$!
-printf '%s\n' "${dash_pid}" >"$(demo_ui_pidfile "${PID_NAME}")"
+demo_ui_record_pf "${PID_NAME}" "${dash_pid}" "${port}" || exit 1
 printf '%s\n' "${access_url}" >"$(demo_ui_access_url_file)"
 
 ready=0
