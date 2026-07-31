@@ -6,7 +6,7 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 SCRIPTS := $(ROOT)/demo/scripts
 
-.PHONY: help up down test-allowlist test-ui-foundation prereq-check \
+.PHONY: help up down test-allowlist test-ui-foundation test-ui-linkerd test-ui-skupper prereq-check \
 	smoke failover \
 	demo-ratelimit demo-mesh demo-skupper demo-smoke demo-failover \
 	ui-app ui-app-check ui-linkerd ui-linkerd-check \
@@ -20,6 +20,8 @@ help:
 	  '  make prereq-check   Fail-fast host prerequisite gate (incl. cloud-provider-kind)' \
 	  '  make test-allowlist Allowlist refusal suite' \
 	  '  make test-ui-foundation  UI foundation + Phase A contract suite (offline)' \
+	  '  make test-ui-linkerd     UI Phase B Viz contract suite (offline)' \
+	  '  make test-ui-skupper     UI Phase C observer + teardown suite (offline)' \
 	  '  make smoke          End-to-end smoke (200/429, mesh, Skupper, dig) — offline if no Kind' \
 	  '  make failover       Hurt west primary; wait CoreDNS→east; timeout≠0' \
 	  '  make demo-ratelimit Burst Gateway traffic; expect HTTP 429 (N-S wow)' \
@@ -29,10 +31,10 @@ help:
 	  '  make demo-failover  Alias of make failover' \
 	  '  make ui-app         Phase A: hosts hint + ACCESS_URL (opt-in; not part of up)' \
 	  '  make ui-app-check   Phase A: hostname curl 200/429 + print ACCESS_URL' \
-	  '  make ui-linkerd     Phase B stub: Linkerd Viz (PR2)' \
-	  '  make ui-linkerd-check  Phase B stub check (PR2)' \
-	  '  make ui-skupper     Phase C stub: Skupper observer (PR3)' \
-	  '  make ui-skupper-check  Phase C stub check (PR3)' \
+	  '  make ui-linkerd     Phase B: Linkerd Viz west-only (PF prefer :50750)' \
+	  '  make ui-linkerd-check  Phase B: viz check + HTTP; print ACCESS_URL' \
+	  '  make ui-skupper     Phase C: Skupper observer (HTTPS PF prefer :8443)' \
+	  '  make ui-skupper-check  Phase C: curl -k -u …; print ACCESS_URL' \
 	  '  make ui-down        Tear down B/C UI only (A=docs reminder)' \
 	  'Optional: CLUSTER=<allowlisted-name> scopes up/down/demo-ratelimit/ui-*'
 
@@ -50,6 +52,12 @@ test-allowlist:
 
 test-ui-foundation:
 	@$(SCRIPTS)/test-ui-foundation.sh
+
+test-ui-linkerd:
+	@$(SCRIPTS)/test-ui-linkerd.sh
+
+test-ui-skupper:
+	@$(SCRIPTS)/test-ui-skupper.sh
 
 smoke demo-smoke:
 	@$(SCRIPTS)/smoke.sh
