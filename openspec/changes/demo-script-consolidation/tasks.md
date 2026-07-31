@@ -52,5 +52,5 @@ Locks: `make ui` only; no `talk-up`; `lib/`; hard cut; `up` UI-free; keep `ui-do
 
 ## Phase 4: Docs (PR2 if fits; else PR3)
 
-- [ ] 4.1 README happy path: `prereq-check` → `up` → `smoke` → optional `ui` → `down`; remove old UI target docs
+- [x] 4.1 README happy path: `prereq-check` → `up` → `smoke` → optional `ui` → `down`; remove old UI target docs
 - [x] 4.2 Spot-check `demo/**/*.md` for `ui-app`/`ui-linkerd`/`ui-skupper`/`talk-up` leftovers

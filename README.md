@@ -49,13 +49,13 @@ Local LB is **cloud-provider-kind** with `--enable-lb-port-mapping` (not MetalLB
 
 ## Talk UIs (opt-in — not part of `make up`)
 
-Graphical surfaces for rehearsal/talk. Critical-path success remains RateLimit, mesh, Skupper, and failover. This demo does **not** install Kuadrant Grafana, Envoy admin, Kiali, or Kubernetes Dashboard.
+One public entry: **`make ui`** runs Phase **A → B → C** (each start+validate + `ACCESS_URL`), **fail-fast**. Critical-path success remains RateLimit, mesh, Skupper, and failover. This demo does **not** install Kuadrant Grafana, Envoy admin, Kiali, or Kubernetes Dashboard.
 
 Dashboards use **localhost port-forward only** (never CCM LB). Reserved host ports: `8080`, `8081`, `18080`, `45671`, `55671`.
 
-### Phase A — Emojivoto (browser)
+### Hosts (Phase A)
 
-1. After `make up`, add once to `/etc/hosts`:
+After `make up`, add once to `/etc/hosts`:
 
 ```text
 127.0.0.1 emojivoto.demo.local
@@ -65,78 +65,27 @@ Dashboards use **localhost port-forward only** (never CCM LB). Reserved host por
 echo '127.0.0.1 emojivoto.demo.local' | sudo tee -a /etc/hosts
 ```
 
-2. Open:
-
 | Surface | URL |
 |---------|-----|
 | West Gateway (primary) | **http://emojivoto.demo.local:8080/** |
 | East Gateway (optional) | **http://emojivoto.demo.local:8081/** |
+| Linkerd Viz (Phase B) | **http://127.0.0.1:50750/** (or printed free port) |
+| Skupper observer (Phase C) | **https://127.0.0.1:8443/** (or printed free port) + basic-auth once |
 
-Hostname is required — bare `http://127.0.0.1:8080/` without `Host` is not the documented path.
-
-3. Validate:
-
-```bash
-make ui-app          # prints ACCESS_URL=http://emojivoto.demo.local:8080/
-make ui-app-check    # hostname curl; expect 200 or 429
-```
-
-**Note:** RateLimit is **3 req / 10s**. Clicking lista/leaderboard quickly may return **429** — that is the N-S wow (expected).
-
-### Phase B — Linkerd Viz (mesh topology)
-
-West-only, pin `edge-26.6.3`, bundled Prometheus OK. Skip-inject on N-S/Skupper namespaces is unchanged.
+Hostname is required for the app — bare `http://127.0.0.1:8080/` without `Host` is not the documented path.
 
 ```bash
-make ui-linkerd          # install Viz + localhost PF (prefer :50750)
-make ui-linkerd-check    # prints ACCESS_URL + probe
+make ui                  # A→B→C; prints ACCESS_URL each phase; fail-fast
+make ui-down             # tear down B/C (A is docs/hosts only)
 ```
 
-| Surface | URL |
-|---------|-----|
-| Linkerd dashboard | **http://127.0.0.1:50750/** (or the free port printed as `ACCESS_URL=`) |
+**Phase A:** `ACCESS_URL=http://emojivoto.demo.local:8080/` — hostname curl expects **200** or **429**. RateLimit is **3 req / 10s**; clicking lista/leaderboard quickly may return **429** (N-S wow).
 
-If the preferred port is busy, the helper picks another and **prints the final URL** — that printed URL is the contract for the run.
+**Phase B:** west-only Viz @ `edge-26.6.3`; prefer `:50750`; never CCM LB; skip-inject unchanged.
 
-### Phase C — Skupper network-observer (VAN console)
-
-Opt-in observer **2.2.1**. Prefer podman-edge; if Helm cannot run there, **fallback is `kind-west` namespace `skupper`** (documented). Accepts a second Prometheus + RAM cost when used with Viz.
-
-```bash
-make ui-skupper          # install observer + HTTPS PF (prefer :8443)
-make ui-skupper-check    # prints ACCESS_URL + auth hint
-```
-
-| Surface | URL |
-|---------|-----|
-| Skupper network console | **https://127.0.0.1:8443/** (or printed free port) |
-
-Basic auth (generated once, **not committed**):
-
-```bash
-cat demo/.run/ui-skupper-basic-auth
-# BASIC_AUTH_USER=skupper
-# BASIC_AUTH_PASSWORD=…
-```
-
-Browser: accept the self-signed cert warning, then enter user/password from that file.
-
-### Tear down UIs
-
-```bash
-make ui-down             # stop PF + uninstall Viz + observer (A is docs/hosts only)
-```
+**Phase C:** network-observer **2.2.1**; prefer podman-edge, fallback west `skupper` NS; HTTPS + basic-auth once (saved under `demo/.run/ui-skupper-basic-auth`, gitignored).
 
 `make down` calls `ui-down` best-effort before destroying demo sites.
-
-### Quick UI rehearsal
-
-```bash
-make ui-app-check        # ACCESS_URL=http://emojivoto.demo.local:8080/
-make ui-linkerd && make ui-linkerd-check   # ACCESS_URL=http://127.0.0.1:50750/
-make ui-skupper && make ui-skupper-check   # ACCESS_URL=https://127.0.0.1:8443/ + auth
-make ui-down
-```
 
 ## CLI probes (after `make up`)
 
@@ -157,15 +106,16 @@ curl -sS http://127.0.0.1:18080/
 
 ```bash
 make prereq-check
-make up                 # ~several minutes; re-run is idempotent
+make up                 # ~several minutes; re-run is idempotent (no UIs)
 make smoke              # 200/429, mesh, Skupper, dig
+make ui                 # optional talk UIs A→B→C (fail-fast)
 ```
 
 **Live critical path** (prefer Make over typing YAML):
 
 1. **N-S RateLimit** — `make demo-ratelimit` (burst → at least one **429**), or browse the app until 429
-2. **E-W mesh** — `make demo-mesh` (`linkerd check` + emojivoto); optional Viz: `make ui-linkerd`
-3. **Skupper** — `make demo-skupper` (3-site / VAN); optional console: `make ui-skupper`
+2. **E-W mesh** — `make demo-mesh` (`linkerd check` + emojivoto); optional Viz via `make ui` (Phase B)
+3. **Skupper** — `make demo-skupper` (3-site / VAN); optional console via `make ui` (Phase C)
 4. **Failover** — `make failover`  
    - Scales west Envoy Gateway dataplane → 0 (`envoy-gateway-system`) and **deletes** west DNSPolicy  
      (do **not** set `weight: 0` — Kuadrant CoreDNS panics)  
@@ -196,18 +146,16 @@ make down               # best-effort ui-down, then demo sites only; kind-cluste
 | `make test-ui-foundation` | UI foundation + Phase A (offline) |
 | `make test-ui-linkerd` | UI Phase B Viz (offline) |
 | `make test-ui-skupper` | UI Phase C observer + teardown (offline) |
-| `make ui-app` / `ui-app-check` | Phase A browser hosts + validation |
-| `make ui-linkerd` / `ui-linkerd-check` | Phase B Viz west-only |
-| `make ui-skupper` / `ui-skupper-check` | Phase C observer + basic-auth |
+| `make ui` | Opt-in talk UIs A→B→C (start+validate; fail-fast) |
 | `make ui-down` | Tear down B/C UI only |
 
-Optional: `CLUSTER=kind-west` (etc.) scopes `up` / `down` / `demo-ratelimit` / `ui-*`.
+Optional: `CLUSTER=kind-west` (etc.) scopes `up` / `down` / `demo-ratelimit` / `ui*`.
 
 ## Pins & layout
 
 - Versions: [`demo/VERSIONS.md`](demo/VERSIONS.md)
 - Manifests: `demo/{kind,gateway,kuadrant,linkerd,skupper,apps}/`
-- Scripts: `demo/scripts/` (lifecycle + `ui-*`)
+- Scripts: `demo/scripts/` (lifecycle + `ui.sh`); internals under `demo/scripts/lib/`
 - Runtime state: `demo/.run/` (gitignored — CCM pid, UI PF pids, Skupper basic-auth)
 - SDD specs: `openspec/specs/`
 - Archived changes:
