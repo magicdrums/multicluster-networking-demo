@@ -28,10 +28,10 @@ Locks: `make ui` only; no `talk-up`; `lib/`; hard cut; `up` UI-free; keep `ui-do
 
 ## Phase 1: Foundation — `lib/` move (PR1)
 
-- [ ] 1.1 Create `demo/scripts/lib/`; move `common.sh`, `cloud-provider-kind.sh`, `ensure-skupper-localhost-san.sh`, `redeem-podman-skupper.sh` into it
-- [ ] 1.2 Retarget sources in `up.sh`, `down.sh`, `prereq-check.sh`, `ui-common.sh`, `ui-down.sh`, probes/`redeem` callers → `lib/`
-- [ ] 1.3 Update greps in `smoke.sh`, `check-skupper.sh`, any docs that hardcode old helper paths
-- [ ] 1.4 Verify: three `test-ui-*` still green; old per-phase UI Make targets still work
+- [x] 1.1 Create `demo/scripts/lib/`; move `common.sh`, `cloud-provider-kind.sh`, `ensure-skupper-localhost-san.sh`, `redeem-podman-skupper.sh` into it
+- [x] 1.2 Retarget sources in `up.sh`, `down.sh`, `prereq-check.sh`, `ui-common.sh`, `ui-down.sh`, probes/`redeem` callers → `lib/`
+- [x] 1.3 Update greps in `smoke.sh`, `check-skupper.sh`, any docs that hardcode old helper paths
+- [x] 1.4 Verify: three `test-ui-*` still green; old per-phase UI Make targets still work
 
 ## Phase 2: Core — dispatcher + hard cut (PR2)
 

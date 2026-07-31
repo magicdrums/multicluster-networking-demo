@@ -51,7 +51,7 @@ See `demo/VERSIONS.md` for install pins. Offline checks validate manifests only.
   2. Redeems the grant from a container on network `kind` (grant URL is still `10.89.0.x`)
   3. Rewrites Link endpoints to `127.0.0.1` and reloads `podman-edge`
   ```bash
-  ./demo/scripts/redeem-podman-skupper.sh
+  ./demo/scripts/lib/redeem-podman-skupper.sh
   ```
   Live hybrid check (from Kind):
   ```bash

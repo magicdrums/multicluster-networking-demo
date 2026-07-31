@@ -3,8 +3,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=common.sh
-source "${SCRIPT_DIR}/common.sh"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
 
 ROOT="$(demo_repo_root)"
 SKUPPER_DIR="${ROOT}/demo/skupper"
@@ -77,10 +77,10 @@ offline_validate() {
   assert_grep "VERSIONS pins cloud-provider-kind" "cloud-provider-kind" "${ROOT}/demo/VERSIONS.md"
   assert_grep "Skupper README documents CCM LB" "cloud-provider-kind" "${ROOT}/demo/skupper/README.md"
   assert_grep "README documents Option C localhost" "Option C" "${ROOT}/demo/skupper/README.md"
-  require_file "${ROOT}/demo/scripts/redeem-podman-skupper.sh"
-  require_file "${ROOT}/demo/scripts/ensure-skupper-localhost-san.sh"
-  assert_grep "redeem rewrites Link to localhost" "rewriting Link endpoints" "${ROOT}/demo/scripts/redeem-podman-skupper.sh"
-  assert_grep "ensure SAN helper drops controlled" "internal.skupper.io/controlled-" "${ROOT}/demo/scripts/ensure-skupper-localhost-san.sh"
+  require_file "${ROOT}/demo/scripts/lib/redeem-podman-skupper.sh"
+  require_file "${ROOT}/demo/scripts/lib/ensure-skupper-localhost-san.sh"
+  assert_grep "redeem rewrites Link to localhost" "rewriting Link endpoints" "${ROOT}/demo/scripts/lib/redeem-podman-skupper.sh"
+  assert_grep "ensure SAN helper drops controlled" "internal.skupper.io/controlled-" "${ROOT}/demo/scripts/lib/ensure-skupper-localhost-san.sh"
 
   if ! command -v skupper >/dev/null 2>&1; then
     bad "skupper CLI missing"

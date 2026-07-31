@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Shared helpers for opt-in talk UI scripts (Phase A/B/C).
 # Reserved ports must never be used for dashboard port-forwards.
-# shellcheck source=common.sh
+# shellcheck source=lib/common.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
-source "${SCRIPT_DIR}/common.sh"
+source "${SCRIPT_DIR}/lib/common.sh"
 
 # Gateway / CCM / Skupper host ports — never for UI PF.
 DEMO_UI_RESERVED_PORTS=(8080 8081 18080 18081 45671 55671)

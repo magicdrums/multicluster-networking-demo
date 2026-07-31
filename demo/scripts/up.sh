@@ -4,10 +4,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=common.sh
-source "${SCRIPT_DIR}/common.sh"
-# shellcheck source=cloud-provider-kind.sh
-source "${SCRIPT_DIR}/cloud-provider-kind.sh"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
+# shellcheck source=lib/cloud-provider-kind.sh
+source "${SCRIPT_DIR}/lib/cloud-provider-kind.sh"
 
 ROOT="$(demo_repo_root)"
 KIND_DIR="${ROOT}/demo/kind"
@@ -402,10 +402,10 @@ link_skupper_van() {
     fi
   fi
   printf 'up: redeeming token on podman-edge (Option C: CCM localhost + SANs)\n'
-  if "${SCRIPT_DIR}/redeem-podman-skupper.sh"; then
+  if "${SCRIPT_DIR}/lib/redeem-podman-skupper.sh"; then
     printf 'up: podman-edge linked into VAN (127.0.0.1 CCM path)\n'
   else
-    printf 'up: podman-edge link failed — re-run ./demo/scripts/redeem-podman-skupper.sh; see demo/skupper/README.md\n'
+    printf 'up: podman-edge link failed — re-run ./demo/scripts/lib/redeem-podman-skupper.sh; see demo/skupper/README.md\n'
     return 1
   fi
   # Confirm Kind sees 3 sites (west+east+podman) when possible.

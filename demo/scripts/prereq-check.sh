@@ -3,8 +3,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=common.sh
-source "${SCRIPT_DIR}/common.sh"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
 
 MIN_INOTIFY_INSTANCES=512
 # cloud-provider-kind: Kind LoadBalancer for Skupper linkAccess + Gateway EXTERNAL-IP (NOT MetalLB).
