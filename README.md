@@ -52,8 +52,33 @@ Local LB is **cloud-provider-kind** with `--enable-lb-port-mapping` (not MetalLB
 
 ## Access (after `make up`)
 
+### Browser (Phase A — opt-in)
+
+Add once to `/etc/hosts`:
+
+```text
+127.0.0.1 emojivoto.demo.local
+```
+
+Then open the west app (hostname required — **not** bare `http://127.0.0.1:8080/` without Host):
+
+```text
+http://emojivoto.demo.local:8080/
+```
+
+Optional east Gateway: `http://emojivoto.demo.local:8081/`.
+
 ```bash
-# North-south (west Gateway host-map :8080; east uses :8081 to avoid CCM port clash)
+make ui-app          # hosts hint + ACCESS_URL=http://emojivoto.demo.local:8080/
+make ui-app-check    # hostname curl; expect 200 or 429; prints the same URL
+```
+
+Talk UI helpers are **outside** the critical path and are **not** part of `make up`. Success remains RateLimit, mesh, Skupper, and failover. This demo does **not** install Kuadrant Grafana, Envoy admin, Kiali, or Kubernetes Dashboard as talk surfaces. Phase B (Linkerd Viz) and Phase C (Skupper observer) are separate opt-in targets (`make ui-linkerd` / `make ui-skupper`) — stubs until later PRs.
+
+### CLI probes
+
+```bash
+# North-south (same Host; useful for scripts/CI)
 curl -sS -H 'Host: emojivoto.demo.local' http://127.0.0.1:8080/
 # Secondary site (after make up includes kind-east):
 # curl -sS -H 'Host: emojivoto.demo.local' http://127.0.0.1:8081/
@@ -97,6 +122,8 @@ make smoke              # 200/429, mesh, Skupper, dig
    - Restores west Envoy + DNSPolicy on script exit  
 5. **Auth MAY (bonus only)** — optional Authorino API-key; **not** required for success (see `demo/kuadrant/README.md`)
 
+**Optional browser (Phase A)** — after hosts + `make up`, `make ui-app` / `make ui-app-check` print `ACCESS_URL=http://emojivoto.demo.local:8080/`. Not required for critical-path success; Viz/observer not required either.
+
 **Rollback / teardown:**
 
 ```bash
@@ -116,8 +143,13 @@ make down               # demo sites only; kind-cluster untouched
 | `make demo-mesh` | Linkerd / emojivoto |
 | `make demo-skupper` | Skupper / legacy-emoji |
 | `make test-allowlist` | Refuse `kind-cluster` / unknown names |
+| `make test-ui-foundation` | UI foundation + Phase A URL contract (offline) |
+| `make ui-app` / `ui-app-check` | Phase A browser hosts + hostname validation (opt-in) |
+| `make ui-linkerd` / `ui-linkerd-check` | Phase B Viz (stub until PR2) |
+| `make ui-skupper` / `ui-skupper-check` | Phase C observer (stub until PR3) |
+| `make ui-down` | Tear down B/C UI only |
 
-Optional: `CLUSTER=kind-west` (etc.) scopes `up` / `down` / `demo-ratelimit`.
+Optional: `CLUSTER=kind-west` (etc.) scopes `up` / `down` / `demo-ratelimit` / `ui-*`.
 
 ## Pins & layout
 
