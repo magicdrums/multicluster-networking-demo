@@ -60,3 +60,11 @@ Delivery locked: **feature-branch-chain** (same as `multicluster-connectivity-de
 - [x] 5.2 `ui-down.sh`: stop PF/uninstall Viz+observer only; print what stopped; A=docs reminder
 - [x] 5.3 GREEN: 5.1 pass; `down.sh` best-effort non-fatal `ui-down`
 - [x] 5.4 Rehearsal: A→B→C print locked URLs (or printed free-port contracts); `make ui-down` clears B/C
+
+## Phase 6: Verify PARTIAL evidence (offline asserts)
+
+- [x] 6.1 Foundation: README runbook greps for hosts + Phase A ACCESS_URL
+- [x] 6.2 Linkerd: skip-namespaces + README still disable inject after Viz docs
+- [x] 6.3 Skupper: `up` / `demo-skupper` / `check-skupper` have no ui-skupper dep; README observer opt-in
+- [x] 6.4 Foundation: RateLimit stays `make demo-ratelimit` / HTTP 429; README bans Kuadrant product UI
+- [x] 6.5 Foundation: Failover stays `make failover` / DNS dig path (no product UI dashboard)

@@ -7,6 +7,7 @@ ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 MAKEFILE="${ROOT}/Makefile"
 VERSIONS="${ROOT}/demo/VERSIONS.md"
 LINKERD_README="${ROOT}/demo/linkerd/README.md"
+SKIP_NS="${ROOT}/demo/linkerd/skip-namespaces.yaml"
 UI_LINKERD="${SCRIPT_DIR}/ui-linkerd.sh"
 UI_CHECK="${SCRIPT_DIR}/ui-linkerd-check.sh"
 
@@ -134,6 +135,63 @@ else
   printf 'PASS: ui-linkerd scripts do not wire CCM LB\n'
   pass=$((pass + 1))
 fi
+
+# --- Verify PARTIAL close: West Viz does not change skip-inject ---
+assert_file_contains \
+  "ui-linkerd declares skip-inject unchanged" \
+  "Does not change skip-inject" \
+  "${UI_LINKERD}"
+assert_file_contains \
+  "linkerd README Viz contract keeps skip-inject unchanged" \
+  "Skip-inject | Unchanged" \
+  "${LINKERD_README}"
+assert_file_contains \
+  "linkerd README still skips EG / Kuadrant / CoreDNS / gateway-system / skupper" \
+  "Skip-inject on EG / Kuadrant / CoreDNS / \`gateway-system\` / \`skupper\`" \
+  "${LINKERD_README}"
+assert_file_contains \
+  "linkerd README coexistence skips envoy-gateway-system" \
+  "envoy-gateway-system" \
+  "${LINKERD_README}"
+assert_file_contains \
+  "linkerd README coexistence skips kuadrant-system" \
+  "kuadrant-system" \
+  "${LINKERD_README}"
+assert_file_contains \
+  "linkerd README coexistence skips kuadrant-coredns" \
+  "kuadrant-coredns" \
+  "${LINKERD_README}"
+assert_file_contains \
+  "linkerd README coexistence skips gateway-system" \
+  "gateway-system" \
+  "${LINKERD_README}"
+assert_file_contains \
+  "skip-namespaces disables inject on kuadrant-coredns" \
+  "name: kuadrant-coredns" \
+  "${SKIP_NS}"
+assert_file_contains \
+  "skip-namespaces disables inject on gateway-system" \
+  "name: gateway-system" \
+  "${SKIP_NS}"
+assert_file_contains \
+  "skip-namespaces disables inject on skupper" \
+  "name: skupper" \
+  "${SKIP_NS}"
+# Every skip NS resource must still carry inject=disabled (Viz docs must not drop it)
+for ns in kuadrant-coredns gateway-system skupper; do
+  if awk -v ns="${ns}" '
+    $0 ~ ("name: " ns) {found=1}
+    found && /linkerd.io\/inject: disabled/ {ok=1; exit}
+    found && /^---/ {exit}
+    END {exit ok ? 0 : 1}
+  ' "${SKIP_NS}"; then
+    printf 'PASS: skip-namespaces %s keeps linkerd.io/inject: disabled\n' "${ns}"
+    pass=$((pass + 1))
+  else
+    printf 'FAIL: skip-namespaces %s missing linkerd.io/inject: disabled\n' "${ns}"
+    fail=$((fail + 1))
+  fi
+done
 
 printf '\nUI linkerd suite: %s passed, %s failed\n' "${pass}" "${fail}"
 if [[ "${fail}" -ne 0 ]]; then

@@ -9,6 +9,7 @@ MAKEFILE="${ROOT}/Makefile"
 VERSIONS="${ROOT}/demo/VERSIONS.md"
 SKUPPER_README="${ROOT}/demo/skupper/README.md"
 VALUES="${ROOT}/demo/skupper/network-observer/values.yaml"
+CHECK_SKUPPER="${SCRIPT_DIR}/check-skupper.sh"
 UI_COMMON="${SCRIPT_DIR}/ui-common.sh"
 UI_SKUPPER="${SCRIPT_DIR}/ui-skupper.sh"
 UI_CHECK="${SCRIPT_DIR}/ui-skupper-check.sh"
@@ -288,6 +289,41 @@ else
   printf 'FAIL: Phase C missing preferred 8443 ACCESS_URL construction\n'
   fail=$((fail + 1))
 fi
+
+# --- Verify PARTIAL close: VAN works without observer ---
+# default make up / demo-skupper path must not require ui-skupper
+demo_skupper_recipe="$(awk '/^demo-skupper:/{flag=1; next} /^[^[:space:]#]/{flag=0} flag' "${MAKEFILE}")"
+if grep -E 'ui-skupper' <<<"${demo_skupper_recipe}" >/dev/null 2>&1; then
+  printf 'FAIL: Makefile demo-skupper recipe references ui-skupper\n'
+  printf '  recipe: %s\n' "${demo_skupper_recipe}"
+  fail=$((fail + 1))
+else
+  printf 'PASS: Makefile demo-skupper has no ui-skupper dep\n'
+  pass=$((pass + 1))
+fi
+assert_file_contains \
+  "demo-skupper invokes check-skupper (VAN path)" \
+  "check-skupper.sh" \
+  "${MAKEFILE}"
+if grep -Eiq 'ui-skupper|network-observer' "${CHECK_SKUPPER}"; then
+  printf 'FAIL: check-skupper.sh requires ui-skupper / network-observer\n'
+  fail=$((fail + 1))
+else
+  printf 'PASS: check-skupper.sh has no ui-skupper / observer dependency\n'
+  pass=$((pass + 1))
+fi
+assert_file_contains \
+  "skupper README says observer not part of make up" \
+  "Not** part of \`make up\`" \
+  "${SKUPPER_README}"
+assert_file_contains \
+  "skupper README says VAN works without observer" \
+  "VAN critical path works without it" \
+  "${SKUPPER_README}"
+assert_file_contains \
+  "skupper README marks observer opt-in only" \
+  "Opt-in only" \
+  "${SKUPPER_README}"
 
 printf '\nUI skupper/teardown suite: %s passed, %s failed\n' "${pass}" "${fail}"
 if [[ "${fail}" -ne 0 ]]; then
