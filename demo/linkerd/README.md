@@ -20,3 +20,25 @@ Pinned CLI: **edge-26.6.3** (see `demo/VERSIONS.md`).
 | `emojivoto` | inject |
 
 Do not inject Gateway or Kuadrant control-plane pods.
+
+## Optional Linkerd Viz (Phase B — talk UI)
+
+**Not** part of `make up`. Opt-in only on **kind-west** (full mesh). East Viz is not required.
+
+| Item | Contract |
+|------|----------|
+| Pin | **edge-26.6.3** (same CLI as control plane — see `demo/VERSIONS.md`) |
+| Install + PF | `make ui-linkerd` |
+| Validate | `make ui-linkerd-check` |
+| Access URL | Prefer `http://127.0.0.1:50750/` — helper prints `ACCESS_URL=…` (printed free port is the run contract) |
+| Exposure | Localhost port-forward only — **never** CCM LoadBalancer |
+| Metrics | Bundled Prometheus OK |
+| Skip-inject | Unchanged — Viz must not alter N-S / Skupper inject policy |
+| Tear down PF | `make ui-down` (stops dashboard PF; full Viz uninstall in later PR) |
+
+```bash
+make ui-linkerd
+# === Talk UI (phase B — Linkerd Viz) ===
+# ACCESS_URL=http://127.0.0.1:50750/
+make ui-linkerd-check
+```

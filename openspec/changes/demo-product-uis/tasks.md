@@ -11,7 +11,7 @@
 | Delivery strategy | feature-branch-chain |
 | Chain strategy | feature-branch-chain (locked 2026-07-31 — same as multicluster-connectivity-demo) |
 
-Decision needed before apply: Yes
+Decision needed before apply: No (locked)
 Chained PRs recommended: Yes
 Chain strategy: feature-branch-chain
 400-line budget risk: High
@@ -24,7 +24,7 @@ Chain strategy: feature-branch-chain
 | 2 | Phase B Viz | PR 2 (base=PR1) | `make -n ui-linkerd` | Post-`up`: `make ui-linkerd` → `http://127.0.0.1:50750/` (or printed free port) | `ui-linkerd*`, Viz pin, linkerd README |
 | 3 | Phase C + ui-down | PR 3 (base=PR2) | `make -n ui-skupper ui-down` | Post-`up`: `make ui-skupper` → `https://127.0.0.1:8443/` + auth once; `ui-down` | observer Helm, `ui-skupper*`, `ui-down`, `down.sh` |
 
-Ask before apply: stacked-to-main vs feature-branch-chain vs size:exception.
+Delivery locked: **feature-branch-chain** (same as `multicluster-connectivity-demo`).
 
 ## Phase 1: Foundation
 
@@ -41,10 +41,10 @@ Ask before apply: stacked-to-main vs feature-branch-chain vs size:exception.
 
 ## Phase 3: B — Linkerd Viz
 
-- [ ] 3.1 Pin Viz/Linkerd edge-26.6.3 in `demo/VERSIONS.md`
-- [ ] 3.2 `ui-linkerd.sh`: west-only Viz; PF prefer 50750; print `ACCESS_URL=http://127.0.0.1:<port>/`; skip-inject unchanged; no CCM LB
-- [ ] 3.3 `ui-linkerd-check`: `viz check` and/or HTTP; echo final URL; fail if down
-- [ ] 3.4 `demo/linkerd/README.md`: opt-in Viz + URL contract
+- [x] 3.1 Pin Viz/Linkerd edge-26.6.3 in `demo/VERSIONS.md`
+- [x] 3.2 `ui-linkerd.sh`: west-only Viz; PF prefer 50750; print `ACCESS_URL=http://127.0.0.1:<port>/`; skip-inject unchanged; no CCM LB
+- [x] 3.3 `ui-linkerd-check`: `viz check` and/or HTTP; echo final URL; fail if down
+- [x] 3.4 `demo/linkerd/README.md`: opt-in Viz + URL contract
 
 ## Phase 4: C — Skupper observer
 

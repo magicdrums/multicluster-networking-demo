@@ -73,7 +73,7 @@ make ui-app          # hosts hint + ACCESS_URL=http://emojivoto.demo.local:8080/
 make ui-app-check    # hostname curl; expect 200 or 429; prints the same URL
 ```
 
-Talk UI helpers are **outside** the critical path and are **not** part of `make up`. Success remains RateLimit, mesh, Skupper, and failover. This demo does **not** install Kuadrant Grafana, Envoy admin, Kiali, or Kubernetes Dashboard as talk surfaces. Phase B (Linkerd Viz) and Phase C (Skupper observer) are separate opt-in targets (`make ui-linkerd` / `make ui-skupper`) — stubs until later PRs.
+Talk UI helpers are **outside** the critical path and are **not** part of `make up`. Success remains RateLimit, mesh, Skupper, and failover. This demo does **not** install Kuadrant Grafana, Envoy admin, Kiali, or Kubernetes Dashboard as talk surfaces. Phase B (Linkerd Viz) is opt-in via `make ui-linkerd` (west-only; prefer `http://127.0.0.1:50750/`). Phase C (Skupper observer) remains a separate opt-in stub (`make ui-skupper`) until a later PR.
 
 ### CLI probes
 
@@ -145,7 +145,7 @@ make down               # demo sites only; kind-cluster untouched
 | `make test-allowlist` | Refuse `kind-cluster` / unknown names |
 | `make test-ui-foundation` | UI foundation + Phase A URL contract (offline) |
 | `make ui-app` / `ui-app-check` | Phase A browser hosts + hostname validation (opt-in) |
-| `make ui-linkerd` / `ui-linkerd-check` | Phase B Viz (stub until PR2) |
+| `make ui-linkerd` / `ui-linkerd-check` | Phase B Viz west-only; print `ACCESS_URL=http://127.0.0.1:50750/` (or free port) |
 | `make ui-skupper` / `ui-skupper-check` | Phase C observer (stub until PR3) |
 | `make ui-down` | Tear down B/C UI only |
 
