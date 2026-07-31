@@ -1,0 +1,43 @@
+# Opt-in Skupper Network Observer (talk UI Phase C).
+# Chart: oci://quay.io/skupper/helm/network-observer @ 2.2.1
+# Install into the Skupper site namespace (prefer west `skupper` when podman-edge
+# cannot host Helm). Never commit passwords — chart auto-creates basic-auth.
+#
+# Access: localhost HTTPS port-forward only (prefer :8443). Never CCM LoadBalancer.
+
+fullnameOverride: skupper-network-observer
+
+service:
+  type: ClusterIP
+  port: 443
+
+ingress:
+  enabled: false
+
+route:
+  enabled: false
+
+auth:
+  strategy: basic
+  basic:
+    # Auto-generate htpasswd Secret (user "skupper" + random PLAIN password).
+    # Credentials are retrieved at runtime into demo/.run/ (gitignored).
+    create: true
+    secretName: ""
+
+tls:
+  skupperIssued: true
+  openshiftIssued: false
+  secretName: ""
+
+# Bundled Prometheus is intentional (2nd Prom alongside Linkerd Viz).
+# Ephemeral storage keeps Kind RAM lighter; persistence not required for talk.
+prometheus:
+  persistence:
+    enabled: false
+
+# Router endpoint is the local site router in the same namespace.
+router:
+  endpoint: "amqps://skupper-router-local"
+  certificate:
+    create: true

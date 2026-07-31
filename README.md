@@ -73,7 +73,7 @@ make ui-app          # hosts hint + ACCESS_URL=http://emojivoto.demo.local:8080/
 make ui-app-check    # hostname curl; expect 200 or 429; prints the same URL
 ```
 
-Talk UI helpers are **outside** the critical path and are **not** part of `make up`. Success remains RateLimit, mesh, Skupper, and failover. This demo does **not** install Kuadrant Grafana, Envoy admin, Kiali, or Kubernetes Dashboard as talk surfaces. Phase B (Linkerd Viz) is opt-in via `make ui-linkerd` (west-only; prefer `http://127.0.0.1:50750/`). Phase C (Skupper observer) remains a separate opt-in stub (`make ui-skupper`) until a later PR.
+Talk UI helpers are **outside** the critical path and are **not** part of `make up`. Success remains RateLimit, mesh, Skupper, and failover. This demo does **not** install Kuadrant Grafana, Envoy admin, Kiali, or Kubernetes Dashboard as talk surfaces. Phase B (Linkerd Viz) is opt-in via `make ui-linkerd` (west-only; prefer `http://127.0.0.1:50750/`). Phase C (Skupper network-observer) is opt-in via `make ui-skupper` (prefer podman-edge, fallback west `skupper`; prefer `https://127.0.0.1:8443/` + basic-auth once in `demo/.run/`). Tear down B/C with `make ui-down`.
 
 ### CLI probes
 
@@ -124,10 +124,19 @@ make smoke              # 200/429, mesh, Skupper, dig
 
 **Optional browser (Phase A)** — after hosts + `make up`, `make ui-app` / `make ui-app-check` print `ACCESS_URL=http://emojivoto.demo.local:8080/`. Not required for critical-path success; Viz/observer not required either.
 
+**Optional product UIs (rehearsal)** — A→B→C URL contracts:
+
+```bash
+make ui-app-check      # ACCESS_URL=http://emojivoto.demo.local:8080/
+make ui-linkerd        # ACCESS_URL=http://127.0.0.1:50750/ (or printed free port)
+make ui-skupper        # ACCESS_URL=https://127.0.0.1:8443/ + BASIC_AUTH_* once
+make ui-down           # clears B/C PF + uninstalls Viz/observer
+```
+
 **Rollback / teardown:**
 
 ```bash
-make down               # demo sites only; kind-cluster untouched
+make down               # best-effort ui-down, then demo sites only; kind-cluster untouched
 ```
 
 `make up` is idempotent on re-run (Kind skip-create, Linkerd upgrade-when-present). It **fails** if the Skupper three-site VAN does not link (token issue / east redeem / podman-edge Option C).
@@ -144,10 +153,12 @@ make down               # demo sites only; kind-cluster untouched
 | `make demo-skupper` | Skupper / legacy-emoji |
 | `make test-allowlist` | Refuse `kind-cluster` / unknown names |
 | `make test-ui-foundation` | UI foundation + Phase A URL contract (offline) |
+| `make test-ui-linkerd` | UI Phase B Viz contract (offline) |
+| `make test-ui-skupper` | UI Phase C observer + teardown threats (offline) |
 | `make ui-app` / `ui-app-check` | Phase A browser hosts + hostname validation (opt-in) |
 | `make ui-linkerd` / `ui-linkerd-check` | Phase B Viz west-only; print `ACCESS_URL=http://127.0.0.1:50750/` (or free port) |
-| `make ui-skupper` / `ui-skupper-check` | Phase C observer (stub until PR3) |
-| `make ui-down` | Tear down B/C UI only |
+| `make ui-skupper` / `ui-skupper-check` | Phase C observer; print `ACCESS_URL=https://127.0.0.1:8443/` + auth once |
+| `make ui-down` | Tear down B/C UI only (PF + uninstall Viz/observer) |
 
 Optional: `CLUSTER=kind-west` (etc.) scopes `up` / `down` / `demo-ratelimit` / `ui-*`.
 
