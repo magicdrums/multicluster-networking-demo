@@ -68,7 +68,7 @@ See `demo/VERSIONS.md` for install pins. Offline checks validate manifests only.
 |------|----------|
 | Pin | Helm chart `oci://quay.io/skupper/helm/network-observer` **2.2.1** (see `demo/VERSIONS.md`) |
 | Site preference | Prefer **podman-edge**; Podman cannot host the Helm chart → print fallback and install on **kind-west** `skupper` (`SITE=kind-west`) |
-| Entry | Phase C of `make ui` (fail-fast A→B→C) |
+| Entry | `make ui` runs **A→B→C** (app + Viz + observer); this section describes **Phase C** only |
 | Access URL | Prefer `https://127.0.0.1:8443/` — helper prints `ACCESS_URL=…` (printed free port is the run contract) |
 | Auth | Chart auto-creates basic-auth (user `skupper` + random password). Printed **once** as `BASIC_AUTH_USER=` / `BASIC_AUTH_PASSWORD=` and saved under `demo/.run/ui-skupper-basic-auth` (**gitignored** — never commit) |
 | Exposure | Localhost HTTPS port-forward only — **never** CCM LoadBalancer |
@@ -77,6 +77,7 @@ See `demo/VERSIONS.md` for install pins. Offline checks validate manifests only.
 
 ```bash
 make ui
+# make ui always starts app (A), then Viz (B), then observer (C) — fail-fast
 # === Talk UI (phase C — Skupper network-observer) ===
 # ACCESS_URL=https://127.0.0.1:8443/
 # BASIC_AUTH_USER=skupper

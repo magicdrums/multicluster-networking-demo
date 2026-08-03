@@ -28,7 +28,7 @@ Do not inject Gateway or Kuadrant control-plane pods.
 | Item | Contract |
 |------|----------|
 | Pin | **edge-26.6.3** (same CLI as control plane — see `demo/VERSIONS.md`) |
-| Entry | Phase B of `make ui` (fail-fast A→B→C) |
+| Entry | `make ui` runs **A→B→C** (app + Viz + observer); this section describes **Phase B** only |
 | Access URL | Prefer `http://127.0.0.1:50750/` — helper prints `ACCESS_URL=…` (printed free port is the run contract) |
 | Exposure | Localhost port-forward only — **never** CCM LoadBalancer |
 | Metrics | Bundled Prometheus OK |
@@ -37,6 +37,7 @@ Do not inject Gateway or Kuadrant control-plane pods.
 
 ```bash
 make ui
+# make ui always starts app (A), then Viz (B), then observer (C) — fail-fast
 # === Talk UI (phase B — Linkerd Viz) ===
 # ACCESS_URL=http://127.0.0.1:50750/
 ```
