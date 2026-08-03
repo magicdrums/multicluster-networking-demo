@@ -253,31 +253,61 @@ else
 fi
 
 assert_file_contains \
-  "ui-down uses pidfiles for PF stop" \
-  "demo_ui_pidfile" \
+  "ui-down uses shared PF stop helper" \
+  "demo_ui_stop_pf" \
   "${UI_DOWN}"
+assert_file_contains \
+  "ui-common records PF pid+port" \
+  "demo_ui_record_pf" \
+  "${UI_COMMON}"
+assert_file_contains \
+  "ui-common port-fallback stop" \
+  "trying port fallback" \
+  "${UI_COMMON}"
 # shellcheck disable=SC1091
 source "${UI_COMMON}"
 run_dir="$(demo_ui_ensure_run_dir)"
 fake_pidfile="$(demo_ui_pidfile ui-skupper-observer)"
+fake_portfile="$(demo_ui_portfile ui-skupper-observer)"
 printf '1\n' >"${fake_pidfile}"
+printf '8443\n' >"${fake_portfile}"
 out="$(CLUSTER= "${UI_DOWN}" 2>&1 || true)"
-if [[ -f "${fake_pidfile}" ]]; then
-  printf 'FAIL: ui-down did not remove observer pidfile after run\n'
+if [[ -f "${fake_pidfile}" || -f "${fake_portfile}" ]]; then
+  printf 'FAIL: ui-down did not remove observer pid/port files after run\n'
   fail=$((fail + 1))
 else
-  printf 'PASS: ui-down clears recorded observer pidfile\n'
+  printf 'PASS: ui-down clears recorded observer pid/port files\n'
   pass=$((pass + 1))
 fi
-if grep -qE 'ui-skupper-observer|Skupper network-observer|pidfile stale' <<<"${out}"; then
-  printf 'PASS: ui-down reports observer PF teardown from pidfile\n'
+if grep -qE 'ui-skupper-observer|Skupper network-observer|pidfile stale|port fallback' <<<"${out}"; then
+  printf 'PASS: ui-down reports observer PF teardown\n'
   pass=$((pass + 1))
 else
   printf 'FAIL: ui-down did not mention observer PF teardown\n'
   printf '  output: %s\n' "${out}"
   fail=$((fail + 1))
 fi
-rm -f "${fake_pidfile}"
+rm -f "${fake_pidfile}" "${fake_portfile}"
+
+# Port-fallback path: no pidfile, portfile present (verify warning regression).
+printf '8443\n' >"$(demo_ui_portfile ui-skupper-observer)"
+out_fb="$(CLUSTER= "${UI_DOWN}" 2>&1 || true)"
+if [[ -f "$(demo_ui_portfile ui-skupper-observer)" ]]; then
+  printf 'FAIL: ui-down left observer portfile after fallback path\n'
+  fail=$((fail + 1))
+else
+  printf 'PASS: ui-down clears observer portfile on fallback path\n'
+  pass=$((pass + 1))
+fi
+if grep -q 'port fallback' <<<"${out_fb}"; then
+  printf 'PASS: ui-down reports port fallback when pidfile missing\n'
+  pass=$((pass + 1))
+else
+  printf 'FAIL: ui-down did not report port fallback\n'
+  printf '  output: %s\n' "${out_fb}"
+  fail=$((fail + 1))
+fi
+rm -f "$(demo_ui_portfile ui-skupper-observer)"
 
 assert_output_contains \
   "Phase A ACCESS_URL contract" \

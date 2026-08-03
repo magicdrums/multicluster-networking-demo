@@ -17,29 +17,9 @@ fi
 
 printf 'ui-down: Phase A — no process teardown (hosts/docs only; keep /etc/hosts entries)\n'
 
-stop_pidfile() {
-  local label="$1"
-  local name="$2"
-  local pidfile pid
-  pidfile="$(demo_ui_pidfile "${name}")"
-  if [[ ! -f "${pidfile}" ]]; then
-    printf 'ui-down: %s — no pidfile (%s)\n' "${label}" "${name}"
-    return 1
-  fi
-  pid="$(tr -d '[:space:]' <"${pidfile}" || true)"
-  if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
-    kill "${pid}" 2>/dev/null || true
-    wait "${pid}" 2>/dev/null || true
-    printf 'ui-down: stopped %s PF (pid %s)\n' "${label}" "${pid}"
-  else
-    printf 'ui-down: %s pidfile stale (pid %s) — cleaned\n' "${label}" "${pid:-empty}"
-  fi
-  rm -f "${pidfile}"
-  return 0
-}
-
 # --- Phase B: stop Viz dashboard PF + uninstall Viz ---
-stop_pidfile "Linkerd Viz dashboard" "ui-linkerd-dashboard" || true
+demo_ui_stop_pf "Linkerd Viz dashboard" "ui-linkerd-dashboard" \
+  "${UI_LINKERD_PORT:-50750}" "ui-linkerd-access-url" || true
 rm -f "$(demo_ui_run_dir)/ui-linkerd-access-url"
 rm -f "$(demo_ui_run_dir)/ui-linkerd-dashboard.log"
 
@@ -66,7 +46,8 @@ else
 fi
 
 # --- Phase C: stop observer PF + helm uninstall ---
-stop_pidfile "Skupper network-observer" "ui-skupper-observer" || true
+demo_ui_stop_pf "Skupper network-observer" "ui-skupper-observer" \
+  "${UI_SKUPPER_PORT:-8443}" "ui-skupper-access-url" || true
 rm -f "$(demo_ui_run_dir)/ui-skupper-access-url"
 rm -f "$(demo_ui_run_dir)/ui-skupper-observer.log"
 # Auth file is runtime secret material — remove on teardown.

@@ -356,6 +356,10 @@ assert_file_contains \
   "Phase A" \
   "${README}"
 assert_file_contains \
+  "README documents make ui" \
+  "make ui" \
+  "${README}"
+assert_file_contains \
   "README bans Kuadrant Grafana as talk UI" \
   "Kuadrant Grafana" \
   "${README}"
