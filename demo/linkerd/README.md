@@ -28,8 +28,7 @@ Do not inject Gateway or Kuadrant control-plane pods.
 | Item | Contract |
 |------|----------|
 | Pin | **edge-26.6.3** (same CLI as control plane — see `demo/VERSIONS.md`) |
-| Install + PF | `make ui-linkerd` |
-| Validate | `make ui-linkerd-check` |
+| Entry | Phase B of `make ui` (fail-fast A→B→C) |
 | Access URL | Prefer `http://127.0.0.1:50750/` — helper prints `ACCESS_URL=…` (printed free port is the run contract) |
 | Exposure | Localhost port-forward only — **never** CCM LoadBalancer |
 | Metrics | Bundled Prometheus OK |
@@ -37,8 +36,7 @@ Do not inject Gateway or Kuadrant control-plane pods.
 | Tear down | `make ui-down` (stops dashboard PF and uninstalls Viz) |
 
 ```bash
-make ui-linkerd
+make ui
 # === Talk UI (phase B — Linkerd Viz) ===
 # ACCESS_URL=http://127.0.0.1:50750/
-make ui-linkerd-check
 ```

@@ -35,22 +35,22 @@ Locks: `make ui` only; no `talk-up`; `lib/`; hard cut; `up` UI-free; keep `ui-do
 
 ## Phase 2: Core — dispatcher + hard cut (PR2)
 
-- [ ] 2.1 Create `demo/scripts/ui/_phase_a.sh` — merge `ui-app`+`ui-app-check` (west ACCESS_URL + hostname 200|429)
-- [ ] 2.2 Create `demo/scripts/ui/_phase_b.sh` — merge `ui-linkerd`+`ui-linkerd-check` (Viz PF + URL)
-- [ ] 2.3 Create `demo/scripts/ui/_phase_c.sh` — merge `ui-skupper`+`ui-skupper-check` (observer HTTPS + basic-auth once)
-- [ ] 2.4 Create `demo/scripts/ui.sh` — A→B→C fail-fast; optional private `PHASE=all|a|b|c`; print ACCESS_URL each phase
-- [ ] 2.5 Makefile: add `ui` → `ui.sh`; delete `ui-app`, `ui-app-check`, `ui-linkerd`, `ui-linkerd-check`, `ui-skupper`, `ui-skupper-check`; keep `ui-down`; no `talk-up`; help lists `ui`/`ui-down` not old names
-- [ ] 2.6 Delete `demo/scripts/ui-{app,app-check,linkerd,linkerd-check,skupper,skupper-check}.sh`; ensure `up.sh` remains UI-free
+- [x] 2.1 Create `demo/scripts/ui/_phase_a.sh` — merge `ui-app`+`ui-app-check` (west ACCESS_URL + hostname 200|429)
+- [x] 2.2 Create `demo/scripts/ui/_phase_b.sh` — merge `ui-linkerd`+`ui-linkerd-check` (Viz PF + URL)
+- [x] 2.3 Create `demo/scripts/ui/_phase_c.sh` — merge `ui-skupper`+`ui-skupper-check` (observer HTTPS + basic-auth once)
+- [x] 2.4 Create `demo/scripts/ui.sh` — A→B→C fail-fast; optional private `PHASE=all|a|b|c`; print ACCESS_URL each phase
+- [x] 2.5 Makefile: add `ui` → `ui.sh`; delete `ui-app`, `ui-app-check`, `ui-linkerd`, `ui-linkerd-check`, `ui-skupper`, `ui-skupper-check`; keep `ui-down`; no `talk-up`; help lists `ui`/`ui-down` not old names
+- [x] 2.6 Delete `demo/scripts/ui-{app,app-check,linkerd,linkerd-check,skupper,skupper-check}.sh`; ensure `up.sh` remains UI-free
 
 ## Phase 3: Testing + specs (PR2)
 
-- [ ] 3.1 Retarget `test-ui-foundation.sh` — assert `ui.sh`/`lib/`; refuse old Make/script names; Kind-free
-- [ ] 3.2 Retarget `test-ui-linkerd.sh` — Phase B via `ui` surface; Viz not in `up`/CCM
-- [ ] 3.3 Retarget `test-ui-skupper.sh` — Phase C via `ui` surface; observer not in `up`
-- [ ] 3.4 Assert fail-fast contract offline where feasible (B fail ⇒ C not started)
-- [ ] 3.5 Promote deltas: `openspec/specs/talk-ui-surface/spec.md`, `openspec/specs/skupper-van/spec.md`
+- [x] 3.1 Retarget `test-ui-foundation.sh` — assert `ui.sh`/`lib/`; refuse old Make/script names; Kind-free
+- [x] 3.2 Retarget `test-ui-linkerd.sh` — Phase B via `ui` surface; Viz not in `up`/CCM
+- [x] 3.3 Retarget `test-ui-skupper.sh` — Phase C via `ui` surface; observer not in `up`
+- [x] 3.4 Assert fail-fast contract offline where feasible (B fail ⇒ C not started)
+- [x] 3.5 Promote deltas: `openspec/specs/talk-ui-surface/spec.md`, `openspec/specs/skupper-van/spec.md`
 
 ## Phase 4: Docs (PR2 if fits; else PR3)
 
-- [ ] 4.1 README happy path: `prereq-check` → `up` → `smoke` → optional `ui` → `down`; remove old UI target docs
-- [ ] 4.2 Spot-check `demo/**/*.md` for `ui-app`/`ui-linkerd`/`ui-skupper`/`talk-up` leftovers
+- [x] 4.1 README happy path: `prereq-check` → `up` → `smoke` → optional `ui` → `down`; remove old UI target docs
+- [x] 4.2 Spot-check `demo/**/*.md` for `ui-app`/`ui-linkerd`/`ui-skupper`/`talk-up` leftovers

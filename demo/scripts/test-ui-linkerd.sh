@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Focused offline suite for demo-product-uis WU2 (Phase B Linkerd Viz contract).
+# Offline suite: Phase B Linkerd Viz via make ui surface (Kind-free).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,8 +8,8 @@ MAKEFILE="${ROOT}/Makefile"
 VERSIONS="${ROOT}/demo/VERSIONS.md"
 LINKERD_README="${ROOT}/demo/linkerd/README.md"
 SKIP_NS="${ROOT}/demo/linkerd/skip-namespaces.yaml"
-UI_LINKERD="${SCRIPT_DIR}/ui-linkerd.sh"
-UI_CHECK="${SCRIPT_DIR}/ui-linkerd-check.sh"
+PHASE_B="${SCRIPT_DIR}/ui/_phase_b.sh"
+UI_SH="${SCRIPT_DIR}/ui.sh"
 
 pass=0
 fail=0
@@ -80,8 +80,32 @@ else
   pass=$((pass + 1))
 fi
 
-assert_ok "make -n ui-linkerd dry-runs" make -C "${ROOT}" -n ui-linkerd
-assert_ok "make -n ui-linkerd-check dry-runs" make -C "${ROOT}" -n ui-linkerd-check
+# Viz must not be wired into up.sh
+if grep -Eiq 'viz install|ui/_phase_b|linkerd viz' "${SCRIPT_DIR}/up.sh"; then
+  printf 'FAIL: up.sh appears to install/start Viz\n'
+  fail=$((fail + 1))
+else
+  printf 'PASS: up.sh does not install Viz\n'
+  pass=$((pass + 1))
+fi
+
+assert_ok "make -n ui dry-runs" make -C "${ROOT}" -n ui
+
+if [[ -f "${PHASE_B}" ]]; then
+  printf 'PASS: phase B private script present\n'
+  pass=$((pass + 1))
+else
+  printf 'FAIL: missing %s\n' "${PHASE_B}"
+  fail=$((fail + 1))
+fi
+
+if [[ -e "${SCRIPT_DIR}/ui-linkerd.sh" || -e "${SCRIPT_DIR}/ui-linkerd-check.sh" ]]; then
+  printf 'FAIL: old ui-linkerd*.sh still present\n'
+  fail=$((fail + 1))
+else
+  printf 'PASS: old ui-linkerd*.sh removed\n'
+  pass=$((pass + 1))
+fi
 
 assert_file_contains \
   "VERSIONS.md pins Linkerd Viz edge-26.6.3" \
@@ -97,8 +121,8 @@ assert_file_contains \
   "${VERSIONS}"
 
 assert_file_contains \
-  "linkerd README documents opt-in Viz" \
-  "make ui-linkerd" \
+  "linkerd README documents opt-in Viz via make ui" \
+  "make ui" \
   "${LINKERD_README}"
 assert_file_contains \
   "linkerd README URL contract 50750" \
@@ -106,41 +130,39 @@ assert_file_contains \
   "${LINKERD_README}"
 
 assert_fails_with \
-  "ui-linkerd refuses CLUSTER=kind-cluster" \
+  "phase B refuses CLUSTER=kind-cluster" \
   "refusing|allowlist|kind-cluster" \
-  env CLUSTER=kind-cluster "${UI_LINKERD}"
+  env CLUSTER=kind-cluster "${PHASE_B}"
 
 assert_fails_with \
-  "ui-linkerd refuses east (west-only)" \
+  "phase B refuses east (west-only)" \
   "west-only" \
-  env CLUSTER=kind-east "${UI_LINKERD}"
+  env CLUSTER=kind-east "${PHASE_B}"
 
 assert_fails_with \
-  "ui-linkerd-check refuses east (west-only)" \
+  "ui PHASE=b refuses east (west-only)" \
   "west-only" \
-  env CLUSTER=kind-east "${UI_CHECK}"
+  env CLUSTER=kind-east PHASE=b "${UI_SH}"
 
 # Scripts must not mention CCM LB as the access path
 if grep -Eiq 'cloud-provider-kind|LoadBalancer.*(viz|dashboard)|CCM.*LB.*viz' \
-  "${UI_LINKERD}" "${UI_CHECK}" 2>/dev/null; then
-  # Allow explicit "never CCM LB" wording only
-  if ! grep -Eq 'never CCM|no CCM' "${UI_LINKERD}"; then
-    printf 'FAIL: ui-linkerd appears to use CCM LB for Viz\n'
+  "${PHASE_B}" 2>/dev/null; then
+  if ! grep -Eq 'never CCM|no CCM' "${PHASE_B}"; then
+    printf 'FAIL: phase B appears to use CCM LB for Viz\n'
     fail=$((fail + 1))
   else
-    printf 'PASS: ui-linkerd documents never CCM LB\n'
+    printf 'PASS: phase B documents never CCM LB\n'
     pass=$((pass + 1))
   fi
 else
-  printf 'PASS: ui-linkerd scripts do not wire CCM LB\n'
+  printf 'PASS: phase B script does not wire CCM LB\n'
   pass=$((pass + 1))
 fi
 
-# --- Verify PARTIAL close: West Viz does not change skip-inject ---
 assert_file_contains \
-  "ui-linkerd declares skip-inject unchanged" \
+  "phase B declares skip-inject unchanged" \
   "Does not change skip-inject" \
-  "${UI_LINKERD}"
+  "${PHASE_B}"
 assert_file_contains \
   "linkerd README Viz contract keeps skip-inject unchanged" \
   "Skip-inject | Unchanged" \
@@ -177,7 +199,6 @@ assert_file_contains \
   "skip-namespaces disables inject on skupper" \
   "name: skupper" \
   "${SKIP_NS}"
-# Every skip NS resource must still carry inject=disabled (Viz docs must not drop it)
 for ns in kuadrant-coredns gateway-system skupper; do
   if awk -v ns="${ns}" '
     $0 ~ ("name: " ns) {found=1}
