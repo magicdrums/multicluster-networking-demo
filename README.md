@@ -2,9 +2,25 @@
 
 30-minute laptop demo: **Envoy Gateway + Kuadrant + Linkerd + Skupper + CoreDNS** across `kind-west`, `kind-east`, and `podman-edge`.
 
-Wow moments: RateLimit **429**, CoreDNS HA failover, meshed emojivoto, Skupper Kind↔Podman — plus optional **graphical UIs** (app browser, Linkerd Viz, Skupper network console).
+Wow moments: RateLimit **429**, CoreDNS HA failover, meshed emojivoto, Skupper Kind↔Podman — plus optional **graphical UIs** (app, Linkerd Viz, Skupper network console).
 
 Repo: [fmenesesg/multicluster-networking-demo](https://github.com/fmenesesg/multicluster-networking-demo)
+
+## Quick start
+
+```bash
+make prereq-check       # optional; make up already runs this
+make up                 # stack only (no UIs) — re-run is idempotent
+make smoke              # 200/429, mesh, Skupper, dig
+
+# Optional talk UIs (after up):
+echo '127.0.0.1 emojivoto.demo.local' | sudo tee -a /etc/hosts   # once
+make ui                 # A → B → C (start+validate; fail-fast); prints ACCESS_URL each phase
+
+make down               # best-effort ui-down, then demo sites only
+```
+
+That is the whole public path. Everything else below is detail for the talk and troubleshooting.
 
 ## Prerequisites
 
@@ -49,13 +65,13 @@ Local LB is **cloud-provider-kind** with `--enable-lb-port-mapping` (not MetalLB
 
 ## Talk UIs (opt-in — not part of `make up`)
 
-Graphical surfaces for rehearsal/talk. Critical-path success remains RateLimit, mesh, Skupper, and failover. This demo does **not** install Kuadrant Grafana, Envoy admin, Kiali, or Kubernetes Dashboard.
+One public entry: **`make ui`**. It runs Phase **A → B → C** (each start+validate + `ACCESS_URL`) and **fails fast** if a phase fails (later phases do not start). Critical-path success remains RateLimit, mesh, Skupper, and failover — UIs are optional.
 
-Dashboards use **localhost port-forward only** (never CCM LB). Reserved host ports: `8080`, `8081`, `18080`, `45671`, `55671`.
+This demo does **not** install Kuadrant Grafana, Envoy admin, Kiali, or Kubernetes Dashboard.
 
-### Phase A — Emojivoto (browser)
+Dashboards use **localhost port-forward only** (never CCM LB). Reserved host ports (never for UI PF): `8080`, `8081`, `18080`, `18081`, `45671`, `55671`.
 
-1. After `make up`, add once to `/etc/hosts`:
+### Hosts (once)
 
 ```text
 127.0.0.1 emojivoto.demo.local
@@ -65,53 +81,27 @@ Dashboards use **localhost port-forward only** (never CCM LB). Reserved host por
 echo '127.0.0.1 emojivoto.demo.local' | sudo tee -a /etc/hosts
 ```
 
-2. Open:
+### ACCESS_URLs (printed by `make ui`)
 
-| Surface | URL |
-|---------|-----|
-| West Gateway (primary) | **http://emojivoto.demo.local:8080/** |
-| East Gateway (optional) | **http://emojivoto.demo.local:8081/** |
+| Phase | Surface | Typical URL |
+|-------|---------|-------------|
+| A | Emojivoto (west Gateway) | **http://emojivoto.demo.local:8080/** |
+| A | East Gateway (optional) | **http://emojivoto.demo.local:8081/** |
+| B | Linkerd Viz (west-only) | **http://127.0.0.1:50750/** (or printed free port) |
+| C | Skupper network-observer | **https://127.0.0.1:8443/** (or printed free port) |
 
-Hostname is required — bare `http://127.0.0.1:8080/` without `Host` is not the documented path.
-
-3. Validate:
-
-```bash
-make ui-app          # prints ACCESS_URL=http://emojivoto.demo.local:8080/
-make ui-app-check    # hostname curl; expect 200 or 429
-```
-
-**Note:** RateLimit is **3 req / 10s**. Clicking lista/leaderboard quickly may return **429** — that is the N-S wow (expected).
-
-### Phase B — Linkerd Viz (mesh topology)
-
-West-only, pin `edge-26.6.3`, bundled Prometheus OK. Skip-inject on N-S/Skupper namespaces is unchanged.
+Hostname is required for the app — bare `http://127.0.0.1:8080/` without `Host` is not the documented path. If a preferred port is busy, the helper picks another and **prints the final `ACCESS_URL=`** — that printed URL is the contract for the run.
 
 ```bash
-make ui-linkerd          # install Viz + localhost PF (prefer :50750)
-make ui-linkerd-check    # prints ACCESS_URL + probe
+make ui                  # A→B→C; fail-fast
+make ui-down             # stop B/C port-forwards + uninstall Viz/observer (A is docs/hosts only)
 ```
 
-| Surface | URL |
-|---------|-----|
-| Linkerd dashboard | **http://127.0.0.1:50750/** (or the free port printed as `ACCESS_URL=`) |
+**Phase A (Browser):** `ACCESS_URL=http://emojivoto.demo.local:8080/` — expect **200** or **429**. RateLimit is **3 req / 10s** — clicking lista/leaderboard quickly may return **429** (that is the N-S wow).
 
-If the preferred port is busy, the helper picks another and **prints the final URL** — that printed URL is the contract for the run.
+**Phase B:** Linkerd Viz @ `edge-26.6.3`, west-only; bundled Prometheus OK; skip-inject on N-S/Skupper namespaces unchanged.
 
-### Phase C — Skupper network-observer (VAN console)
-
-Opt-in observer **2.2.1**. Prefer podman-edge; if Helm cannot run there, **fallback is `kind-west` namespace `skupper`** (documented). Accepts a second Prometheus + RAM cost when used with Viz.
-
-```bash
-make ui-skupper          # install observer + HTTPS PF (prefer :8443)
-make ui-skupper-check    # prints ACCESS_URL + auth hint
-```
-
-| Surface | URL |
-|---------|-----|
-| Skupper network console | **https://127.0.0.1:8443/** (or printed free port) |
-
-Basic auth (generated once, **not committed**):
+**Phase C:** network-observer **2.2.1**; prefer podman-edge, **fallback** `kind-west` namespace `skupper` (Helm needs Kubernetes). Accept the self-signed cert warning. Basic auth (once, gitignored):
 
 ```bash
 cat demo/.run/ui-skupper-basic-auth
@@ -119,24 +109,7 @@ cat demo/.run/ui-skupper-basic-auth
 # BASIC_AUTH_PASSWORD=…
 ```
 
-Browser: accept the self-signed cert warning, then enter user/password from that file.
-
-### Tear down UIs
-
-```bash
-make ui-down             # stop PF + uninstall Viz + observer (A is docs/hosts only)
-```
-
-`make down` calls `ui-down` best-effort before destroying demo sites.
-
-### Quick UI rehearsal
-
-```bash
-make ui-app-check        # ACCESS_URL=http://emojivoto.demo.local:8080/
-make ui-linkerd && make ui-linkerd-check   # ACCESS_URL=http://127.0.0.1:50750/
-make ui-skupper && make ui-skupper-check   # ACCESS_URL=https://127.0.0.1:8443/ + auth
-make ui-down
-```
+Port-forwards are recorded under `demo/.run/` (`.pid` + `.port`). `make ui-down` stops them by pid and clears leftover localhost listeners if a pidfile is missing. `make down` calls `ui-down` best-effort first.
 
 ## CLI probes (after `make up`)
 
@@ -153,19 +126,13 @@ curl -sS http://127.0.0.1:18080/
 
 ## 30-minute runbook
 
-**Before the talk** (or cold start):
-
-```bash
-make prereq-check
-make up                 # ~several minutes; re-run is idempotent
-make smoke              # 200/429, mesh, Skupper, dig
-```
+**Before the talk** (or cold start): `make prereq-check` → `make up` → `make smoke` → optional `make ui`.
 
 **Live critical path** (prefer Make over typing YAML):
 
 1. **N-S RateLimit** — `make demo-ratelimit` (burst → at least one **429**), or browse the app until 429
-2. **E-W mesh** — `make demo-mesh` (`linkerd check` + emojivoto); optional Viz: `make ui-linkerd`
-3. **Skupper** — `make demo-skupper` (3-site / VAN); optional console: `make ui-skupper`
+2. **E-W mesh** — `make demo-mesh`; optional Viz is Phase B of `make ui`
+3. **Skupper** — `make demo-skupper`; optional console is Phase C of `make ui`
 4. **Failover** — `make failover`  
    - Scales west Envoy Gateway dataplane → 0 (`envoy-gateway-system`) and **deletes** west DNSPolicy  
      (do **not** set `weight: 0` — Kuadrant CoreDNS panics)  
@@ -174,7 +141,7 @@ make smoke              # 200/429, mesh, Skupper, dig
    - Restores west Envoy + DNSPolicy on script exit  
 5. **Auth MAY (bonus only)** — optional Authorino API-key; **not** required (see `demo/kuadrant/README.md`)
 
-**Rollback / teardown:**
+**Rollback:**
 
 ```bash
 make down               # best-effort ui-down, then demo sites only; kind-cluster untouched
@@ -186,33 +153,35 @@ make down               # best-effort ui-down, then demo sites only; kind-cluste
 
 | Target | Purpose |
 |--------|---------|
-| `make up` / `make down` | Lifecycle (allowlist-scoped) |
+| `make up` / `make down` | Lifecycle (allowlist-scoped); `up` stays UI-free |
+| `make prereq-check` | Single host prerequisite gate (also invoked by `up`) |
 | `make smoke` / `make demo-smoke` | End-to-end probes (offline validates if no Kind) |
 | `make failover` / `make demo-failover` | Kill-primary → east |
 | `make demo-ratelimit` | 429 wow |
 | `make demo-mesh` | Linkerd / emojivoto |
 | `make demo-skupper` | Skupper / legacy-emoji |
+| `make ui` | Opt-in talk UIs A→B→C (start+validate; fail-fast) |
+| `make ui-down` | Tear down B/C UI only |
 | `make test-allowlist` | Refuse `kind-cluster` / unknown names |
 | `make test-ui-foundation` | UI foundation + Phase A (offline) |
 | `make test-ui-linkerd` | UI Phase B Viz (offline) |
 | `make test-ui-skupper` | UI Phase C observer + teardown (offline) |
-| `make ui-app` / `ui-app-check` | Phase A browser hosts + validation |
-| `make ui-linkerd` / `ui-linkerd-check` | Phase B Viz west-only |
-| `make ui-skupper` / `ui-skupper-check` | Phase C observer + basic-auth |
-| `make ui-down` | Tear down B/C UI only |
 
-Optional: `CLUSTER=kind-west` (etc.) scopes `up` / `down` / `demo-ratelimit` / `ui-*`.
+Optional: `CLUSTER=kind-west` (etc.) scopes `up` / `down` / `demo-ratelimit` / `ui*`.
 
 ## Pins & layout
 
 - Versions: [`demo/VERSIONS.md`](demo/VERSIONS.md)
 - Manifests: `demo/{kind,gateway,kuadrant,linkerd,skupper,apps}/`
-- Scripts: `demo/scripts/` (lifecycle + `ui-*`)
-- Runtime state: `demo/.run/` (gitignored — CCM pid, UI PF pids, Skupper basic-auth)
+- Operator scripts: `demo/scripts/` (`up`, `down`, `smoke`, `ui.sh`, …)
+- Internals: `demo/scripts/lib/` (CCM, Skupper redeem/SAN, shared helpers)
+- Phase helpers (private): `demo/scripts/ui/_phase_*.sh`
+- Runtime state: `demo/.run/` (gitignored — CCM pid, UI PF pid/port, Skupper basic-auth)
 - SDD specs: `openspec/specs/`
 - Archived changes:
   - `openspec/changes/archive/2026-07-31-multicluster-connectivity-demo/`
   - `openspec/changes/archive/2026-07-31-demo-product-uis/`
+  - `openspec/changes/archive/2026-07-31-demo-script-consolidation/` (after archive)
 
 ## Offline / CI-friendly checks
 

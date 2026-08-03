@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Phase B — opt-in Linkerd Viz on kind-west only. Not part of make up.
-# Installs Viz (bundled Prometheus OK), port-forwards prefer 50750, prints ACCESS_URL.
+# Phase B (private) — Linkerd Viz west-only: install + PF + validate.
+# Invoked by demo/scripts/ui.sh. Not a public Make target.
 # Never uses CCM LB. Does not change skip-inject / N-S namespaces.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
-source "${SCRIPT_DIR}/ui-common.sh"
+source "${SCRIPT_DIR}/../ui-common.sh"
 
 LINKERD_CLIENT_PIN="${LINKERD_CLIENT_PIN:-edge-26.6.3}"
 PREFERRED_PORT="${UI_LINKERD_PORT:-50750}"
@@ -18,7 +18,7 @@ warn_linkerd_client_pin() {
   local client
   client="$(linkerd version --client --short 2>/dev/null || true)"
   if [[ "${client}" != "${LINKERD_CLIENT_PIN}" ]]; then
-    printf 'ui-linkerd: warn: linkerd client is %q; pin is %s (see demo/VERSIONS.md)\n' \
+    printf 'ui phase B: warn: linkerd client is %q; pin is %s (see demo/VERSIONS.md)\n' \
       "${client:-unknown}" "${LINKERD_CLIENT_PIN}" >&2
   fi
 }
@@ -28,18 +28,7 @@ demo_ui_access_url_file() {
 }
 
 stop_existing_dashboard() {
-  local pidfile pid
-  pidfile="$(demo_ui_pidfile "${PID_NAME}")"
-  if [[ ! -f "${pidfile}" ]]; then
-    return 0
-  fi
-  pid="$(tr -d '[:space:]' <"${pidfile}" || true)"
-  if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
-    printf 'ui-linkerd: stopping previous dashboard pid %s\n' "${pid}"
-    kill "${pid}" 2>/dev/null || true
-    wait "${pid}" 2>/dev/null || true
-  fi
-  rm -f "${pidfile}"
+  demo_ui_stop_pf "Linkerd Viz dashboard" "${PID_NAME}" "${PREFERRED_PORT}" "${URL_FILE_NAME}" || true
 }
 
 cluster="$(demo_ui_resolve_cluster_or_abort)" || exit 1
@@ -68,12 +57,12 @@ fi
 ctx="$(demo_kind_context "${cluster}")"
 demo_ui_ensure_run_dir >/dev/null
 
-printf 'ui-linkerd: installing Linkerd Viz on %s (context %s, CLI pin %s)\n' \
+printf 'ui phase B: installing Linkerd Viz on %s (context %s, CLI pin %s)\n' \
   "${cluster}" "${ctx}" "${LINKERD_CLIENT_PIN}"
 linkerd --context "${ctx}" viz install \
   | kubectl --context "${ctx}" apply -f -
 
-printf 'ui-linkerd: waiting for Viz (%s)\n' "${VIZ_WAIT}"
+printf 'ui phase B: waiting for Viz (%s)\n' "${VIZ_WAIT}"
 if ! linkerd --context "${ctx}" viz check --wait "${VIZ_WAIT}"; then
   printf 'error: linkerd viz check failed on %s\n' "${ctx}" >&2
   exit 1
@@ -84,8 +73,7 @@ access_url="http://127.0.0.1:${port}/"
 
 stop_existing_dashboard
 
-printf 'ui-linkerd: starting dashboard PF on 127.0.0.1:%s (no CCM LB)\n' "${port}"
-# --show url: print URLs, do not open a browser. Blocks until killed — background it.
+printf 'ui phase B: starting dashboard PF on 127.0.0.1:%s (no CCM LB)\n' "${port}"
 linkerd --context "${ctx}" viz dashboard \
   --address 127.0.0.1 \
   --port "${port}" \
@@ -93,10 +81,9 @@ linkerd --context "${ctx}" viz dashboard \
   --wait "${VIZ_WAIT}" \
   >"$(demo_ui_run_dir)/ui-linkerd-dashboard.log" 2>&1 &
 dash_pid=$!
-printf '%s\n' "${dash_pid}" >"$(demo_ui_pidfile "${PID_NAME}")"
+demo_ui_record_pf "${PID_NAME}" "${dash_pid}" "${port}" || exit 1
 printf '%s\n' "${access_url}" >"$(demo_ui_access_url_file)"
 
-# Wait until HTTP responds (dashboard boots after PF).
 ready=0
 for _ in $(seq 1 60); do
   code="$(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 2 --max-time 3 \
@@ -120,5 +107,4 @@ fi
 demo_print_access_url "phase B — Linkerd Viz" "${access_url}" \
   "cluster: ${cluster} (west-only)" \
   "access: localhost port-forward only — never CCM LB" \
-  "validate: make ui-linkerd-check" \
   "teardown PF: make ui-down"

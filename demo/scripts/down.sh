@@ -4,10 +4,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=common.sh
-source "${SCRIPT_DIR}/common.sh"
-# shellcheck source=cloud-provider-kind.sh
-source "${SCRIPT_DIR}/cloud-provider-kind.sh"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
+# shellcheck source=lib/cloud-provider-kind.sh
+source "${SCRIPT_DIR}/lib/cloud-provider-kind.sh"
 
 ROOT="$(demo_repo_root)"
 LEGACY_DIR="${ROOT}/demo/apps/legacy-emoji"

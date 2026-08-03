@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Shared helpers for opt-in talk UI scripts (Phase A/B/C).
 # Reserved ports must never be used for dashboard port-forwards.
-# shellcheck source=common.sh
+# shellcheck source=lib/common.sh
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
-source "${SCRIPT_DIR}/common.sh"
+source "${SCRIPT_DIR}/lib/common.sh"
 
 # Gateway / CCM / Skupper host ports — never for UI PF.
 DEMO_UI_RESERVED_PORTS=(8080 8081 18080 18081 45671 55671)
@@ -26,6 +26,114 @@ demo_ui_ensure_run_dir() {
 demo_ui_pidfile() {
   local name="$1"
   printf '%s/%s.pid\n' "$(demo_ui_run_dir)" "${name}"
+}
+
+demo_ui_portfile() {
+  local name="$1"
+  printf '%s/%s.port\n' "$(demo_ui_run_dir)" "${name}"
+}
+
+# Persist PF pid + port and detach from this shell (survives script/pipeline exit).
+# Usage: demo_ui_record_pf <name> <pid> <port>
+demo_ui_record_pf() {
+  local name="${1:-}"
+  local pid="${2:-}"
+  local port="${3:-}"
+  local pidfile portfile
+
+  if [[ -z "${name}" || -z "${pid}" || -z "${port}" ]]; then
+    printf 'error: demo_ui_record_pf requires name pid port\n' >&2
+    return 1
+  fi
+  demo_ui_refuse_reserved_port "${port}" || return 1
+  demo_ui_ensure_run_dir >/dev/null
+
+  pidfile="$(demo_ui_pidfile "${name}")"
+  portfile="$(demo_ui_portfile "${name}")"
+  printf '%s\n' "${pid}" >"${pidfile}"
+  printf '%s\n' "${port}" >"${portfile}"
+  # Detach so `{ make ui; } | tee` / phase-script exit does not SIGHUP the PF.
+  disown "${pid}" 2>/dev/null || true
+
+  if [[ ! -f "${pidfile}" || ! -f "${portfile}" ]]; then
+    printf 'error: failed to persist PF pid/port files for %s under %s\n' \
+      "${name}" "$(demo_ui_run_dir)" >&2
+    return 1
+  fi
+}
+
+# Best-effort kill of listeners on a localhost demo UI port (never reserved CCM ports).
+demo_ui_kill_localhost_port() {
+  local port="${1:-}"
+  local pids
+
+  demo_ui_refuse_reserved_port "${port}" || return 1
+  if command -v fuser >/dev/null 2>&1; then
+    fuser -k "${port}/tcp" >/dev/null 2>&1 || true
+    return 0
+  fi
+  if command -v ss >/dev/null 2>&1; then
+    pids="$(ss -ltnp 2>/dev/null \
+      | sed -n "s/.*:${port} .*pid=\\([0-9]\\+\\).*/\\1/p" \
+      | sort -u || true)"
+    if [[ -n "${pids}" ]]; then
+      # shellcheck disable=SC2086
+      kill ${pids} 2>/dev/null || true
+    fi
+  fi
+}
+
+# Stop a recorded UI port-forward by pidfile; fall back to .port / access-url / preferred port.
+# Usage: demo_ui_stop_pf <label> <name> [preferred_port] [access_url_file_basename]
+demo_ui_stop_pf() {
+  local label="${1:-}"
+  local name="${2:-}"
+  local preferred_port="${3:-}"
+  local url_basename="${4:-}"
+  local pidfile portfile urlfile pid port had_pidfile=0
+
+  pidfile="$(demo_ui_pidfile "${name}")"
+  portfile="$(demo_ui_portfile "${name}")"
+
+  if [[ -f "${pidfile}" ]]; then
+    had_pidfile=1
+    pid="$(tr -d '[:space:]' <"${pidfile}" || true)"
+    if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
+      kill "${pid}" 2>/dev/null || true
+      wait "${pid}" 2>/dev/null || true
+      printf 'ui: stopped %s PF (pid %s)\n' "${label}" "${pid}"
+    else
+      printf 'ui: %s pidfile stale (pid %s) — cleaned\n' "${label}" "${pid:-empty}"
+    fi
+    rm -f "${pidfile}"
+  fi
+
+  port=""
+  if [[ -f "${portfile}" ]]; then
+    port="$(tr -d '[:space:]' <"${portfile}" || true)"
+  fi
+  if [[ -z "${port}" && -n "${url_basename}" ]]; then
+    urlfile="$(demo_ui_run_dir)/${url_basename}"
+    if [[ -f "${urlfile}" ]]; then
+      port="$(sed -n 's#.*://[^:]*:\([0-9][0-9]*\)/.*#\1#p' <"${urlfile}" | head -1 || true)"
+    fi
+  fi
+  if [[ -z "${port}" && -n "${preferred_port}" ]]; then
+    port="${preferred_port}"
+  fi
+
+  if [[ "${had_pidfile}" -eq 0 ]]; then
+    if [[ -f "${portfile}" ]] || { [[ -n "${port}" ]] && demo_ui_port_in_use "${port}"; }; then
+      printf 'ui: %s — no pidfile (%s); trying port fallback\n' "${label}" "${name}"
+    fi
+  fi
+
+  if [[ -n "${port}" ]] && ! demo_ui_is_reserved_port "${port}" && demo_ui_port_in_use "${port}"; then
+    demo_ui_kill_localhost_port "${port}" || true
+    printf 'ui: cleared leftover listener on 127.0.0.1:%s (%s)\n' "${port}" "${label}"
+  fi
+  rm -f "${portfile}"
+  return 0
 }
 
 demo_ui_is_reserved_port() {
