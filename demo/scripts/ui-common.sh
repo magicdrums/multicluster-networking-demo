@@ -62,24 +62,25 @@ demo_ui_record_pf() {
   fi
 }
 
-# Best-effort kill of listeners on a localhost demo UI port (never reserved CCM ports).
+# Best-effort kill of listeners bound to 127.0.0.1 / ::1 only (never reserved CCM ports).
+# Prefer ss scoped to loopback — never broad fuser kill of PORT/tcp (would hit all interfaces).
 demo_ui_kill_localhost_port() {
   local port="${1:-}"
   local pids
 
   demo_ui_refuse_reserved_port "${port}" || return 1
-  if command -v fuser >/dev/null 2>&1; then
-    fuser -k "${port}/tcp" >/dev/null 2>&1 || true
-    return 0
+  if ! command -v ss >/dev/null 2>&1; then
+    printf 'ui: warn: ss not found; cannot safely kill loopback listeners on port %s\n' "${port}" >&2
+    return 1
   fi
-  if command -v ss >/dev/null 2>&1; then
-    pids="$(ss -ltnp 2>/dev/null \
-      | sed -n "s/.*:${port} .*pid=\\([0-9]\\+\\).*/\\1/p" \
-      | sort -u || true)"
-    if [[ -n "${pids}" ]]; then
-      # shellcheck disable=SC2086
-      kill ${pids} 2>/dev/null || true
-    fi
+  # Match only 127.0.0.1:PORT or [::1]:PORT (demo UI PFs bind --address 127.0.0.1).
+  pids="$(ss -ltnp 2>/dev/null \
+    | grep -E "(127\\.0\\.0\\.1|\\[::1\\]):${port}\\s" \
+    | sed -n 's/.*pid=\([0-9]\+\).*/\1/p' \
+    | sort -u || true)"
+  if [[ -n "${pids}" ]]; then
+    # shellcheck disable=SC2086
+    kill ${pids} 2>/dev/null || true
   fi
 }
 
@@ -130,7 +131,13 @@ demo_ui_stop_pf() {
 
   if [[ -n "${port}" ]] && ! demo_ui_is_reserved_port "${port}" && demo_ui_port_in_use "${port}"; then
     demo_ui_kill_localhost_port "${port}" || true
-    printf 'ui: cleared leftover listener on 127.0.0.1:%s (%s)\n' "${port}" "${label}"
+    # Brief wait so ss sees the closed socket before we claim success.
+    sleep 0.2
+    if demo_ui_port_in_use "${port}"; then
+      printf 'ui: warn: listener still present on port %s after teardown (%s)\n' "${port}" "${label}" >&2
+    else
+      printf 'ui: cleared leftover listener on 127.0.0.1:%s (%s)\n' "${port}" "${label}"
+    fi
   fi
   rm -f "${portfile}"
   return 0

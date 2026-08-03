@@ -28,8 +28,8 @@ help:
 	  '  make demo-skupper   Skupper/legacy-emoji check (live or offline manifests)' \
 	  '  make demo-smoke     Alias of make smoke' \
 	  '  make demo-failover  Alias of make failover' \
-	  '  make ui             Opt-in talk UIs A→B→C (start+validate; fail-fast; not part of up)' \
-	  '  make ui-down        Tear down B/C UI only (A=docs reminder)' \
+	  '  make ui             Opt-in talk UIs: app + Linkerd Viz + Skupper observer (A→B→C; fail-fast)' \
+	  '  make ui-down        Tear down Viz + observer PFs (app is hosts/docs only)' \
 	  'Optional: CLUSTER=<allowlisted-name> scopes up/down/demo-ratelimit/ui*'
 
 up:

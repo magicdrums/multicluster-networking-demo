@@ -264,6 +264,21 @@ assert_file_contains \
   "ui-common port-fallback stop" \
   "trying port fallback" \
   "${UI_COMMON}"
+assert_file_contains \
+  "ui-common scopes kill to 127.0.0.1" \
+  "127.0.0.1" \
+  "${UI_COMMON}"
+if grep -Eiq 'fuser[[:space:]]+-k' "${UI_COMMON}"; then
+  printf 'FAIL: ui-common still uses broad fuser -k (all interfaces)\n'
+  fail=$((fail + 1))
+else
+  printf 'PASS: ui-common does not use broad fuser -k\n'
+  pass=$((pass + 1))
+fi
+assert_file_contains \
+  "ui-common verifies port free before claiming cleared" \
+  "listener still present" \
+  "${UI_COMMON}"
 # shellcheck disable=SC1091
 source "${UI_COMMON}"
 run_dir="$(demo_ui_ensure_run_dir)"

@@ -131,8 +131,8 @@ curl -sS http://127.0.0.1:18080/
 **Live critical path** (prefer Make over typing YAML):
 
 1. **N-S RateLimit** — `make demo-ratelimit` (burst → at least one **429**), or browse the app until 429
-2. **E-W mesh** — `make demo-mesh`; optional Viz is Phase B of `make ui`
-3. **Skupper** — `make demo-skupper`; optional console is Phase C of `make ui`
+2. **E-W mesh** — `make demo-mesh`; optional Viz comes with `make ui` (always A→B→C — not Viz-only)
+3. **Skupper** — `make demo-skupper`; optional observer console comes with `make ui` (same A→B→C run)
 4. **Failover** — `make failover`  
    - Scales west Envoy Gateway dataplane → 0 (`envoy-gateway-system`) and **deletes** west DNSPolicy  
      (do **not** set `weight: 0` — Kuadrant CoreDNS panics)  
@@ -160,8 +160,8 @@ make down               # best-effort ui-down, then demo sites only; kind-cluste
 | `make demo-ratelimit` | 429 wow |
 | `make demo-mesh` | Linkerd / emojivoto |
 | `make demo-skupper` | Skupper / legacy-emoji |
-| `make ui` | Opt-in talk UIs A→B→C (start+validate; fail-fast) |
-| `make ui-down` | Tear down B/C UI only |
+| `make ui` | Opt-in talk UIs: app + Linkerd Viz + Skupper observer (A→B→C; fail-fast) |
+| `make ui-down` | Tear down Viz + observer PFs (app is hosts/docs only) |
 | `make test-allowlist` | Refuse `kind-cluster` / unknown names |
 | `make test-ui-foundation` | UI foundation + Phase A (offline) |
 | `make test-ui-linkerd` | UI Phase B Viz (offline) |
