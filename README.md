@@ -13,12 +13,14 @@ make prereq-check       # optional; make up already runs this
 make up                 # stack only (no UIs) — re-run is idempotent
 make smoke              # 200/429, mesh, Skupper, dig
 
-# Optional talk UIs (after up):
+# Optional talk UIs (after up) — always app → Viz → observer (A→B→C):
 echo '127.0.0.1 emojivoto.demo.local' | sudo tee -a /etc/hosts   # once
-make ui                 # A → B → C (start+validate; fail-fast); prints ACCESS_URL each phase
+make ui                 # start+validate each phase (fail-fast); prints ACCESS_URL=
+make ui-down            # stop Viz + observer PFs (app is hosts/docs only)
 
 make down               # best-effort ui-down, then demo sites only
 ```
+
 
 That is the whole public path. Everything else below is detail for the talk and troubleshooting.
 
@@ -65,11 +67,12 @@ Local LB is **cloud-provider-kind** with `--enable-lb-port-mapping` (not MetalLB
 
 ## Talk UIs (opt-in — not part of `make up`)
 
-One public entry: **`make ui`**. It runs Phase **A → B → C** (each start+validate + `ACCESS_URL`) and **fails fast** if a phase fails (later phases do not start). Critical-path success remains RateLimit, mesh, Skupper, and failover — UIs are optional.
+One public entry: **`make ui`**. It always starts **app (A) → Linkerd Viz (B) → Skupper observer (C)** — each start+validate + `ACCESS_URL` — and **fails fast** if a phase fails (later phases do not start). There is no public single-phase Make target. Critical-path success remains RateLimit, mesh, Skupper, and failover — UIs are optional.
 
 This demo does **not** install Kuadrant Grafana, Envoy admin, Kiali, or Kubernetes Dashboard.
 
-Dashboards use **localhost port-forward only** (never CCM LB). Reserved host ports (never for UI PF): `8080`, `8081`, `18080`, `18081`, `45671`, `55671`.
+Dashboards use **localhost port-forward only** (never CCM LB). Reserved host ports (never for UI PF): `8080`, `8081`, `18080`, `18081`, `45671`, `55671`. Teardown kills only loopback listeners (`127.0.0.1` / `::1`), never broad all-interface port kills.
+
 
 ### Hosts (once)
 
@@ -93,8 +96,8 @@ echo '127.0.0.1 emojivoto.demo.local' | sudo tee -a /etc/hosts
 Hostname is required for the app — bare `http://127.0.0.1:8080/` without `Host` is not the documented path. If a preferred port is busy, the helper picks another and **prints the final `ACCESS_URL=`** — that printed URL is the contract for the run.
 
 ```bash
-make ui                  # A→B→C; fail-fast
-make ui-down             # stop B/C port-forwards + uninstall Viz/observer (A is docs/hosts only)
+make ui                  # app + Viz + observer (A→B→C); fail-fast
+make ui-down             # stop Viz + observer PFs + uninstall (app is hosts/docs only)
 ```
 
 **Phase A (Browser):** `ACCESS_URL=http://emojivoto.demo.local:8080/` — expect **200** or **429**. RateLimit is **3 req / 10s** — clicking lista/leaderboard quickly may return **429** (that is the N-S wow).
@@ -109,7 +112,10 @@ cat demo/.run/ui-skupper-basic-auth
 # BASIC_AUTH_PASSWORD=…
 ```
 
-Port-forwards are recorded under `demo/.run/` (`.pid` + `.port`). `make ui-down` stops them by pid and clears leftover localhost listeners if a pidfile is missing. `make down` calls `ui-down` best-effort first.
+Port-forwards are recorded under `demo/.run/` (`.pid` + `.port` + `disown`). `make ui-down` stops them by pid, falls back to loopback port cleanup if a pidfile is missing, and verifies the port is free before claiming “cleared”. `make down` calls `ui-down` best-effort first.
+
+Private knobs (not Make help): `UI_A_*` (app), `UI_B_*` (Viz), `UI_C_*` (observer) — e.g. `UI_B_PORT=50750`, `UI_C_PORT=8443`, `UI_C_SITE=podman-edge`.
+
 
 ## CLI probes (after `make up`)
 
@@ -181,7 +187,7 @@ Optional: `CLUSTER=kind-west` (etc.) scopes `up` / `down` / `demo-ratelimit` / `
 - Archived changes:
   - `openspec/changes/archive/2026-07-31-multicluster-connectivity-demo/`
   - `openspec/changes/archive/2026-07-31-demo-product-uis/`
-  - `openspec/changes/archive/2026-07-31-demo-script-consolidation/` (after archive)
+  - `openspec/changes/archive/2026-08-03-demo-script-consolidation/`
 
 ## Offline / CI-friendly checks
 
