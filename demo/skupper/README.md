@@ -51,7 +51,7 @@ See `demo/VERSIONS.md` for install pins. Offline checks validate manifests only.
   2. Redeems the grant from a container on network `kind` (grant URL is still `10.89.0.x`)
   3. Rewrites Link endpoints to `127.0.0.1` and reloads `podman-edge`
   ```bash
-  ./demo/scripts/redeem-podman-skupper.sh
+  ./demo/scripts/lib/redeem-podman-skupper.sh
   ```
   Live hybrid check (from Kind):
   ```bash
@@ -68,8 +68,7 @@ See `demo/VERSIONS.md` for install pins. Offline checks validate manifests only.
 |------|----------|
 | Pin | Helm chart `oci://quay.io/skupper/helm/network-observer` **2.2.1** (see `demo/VERSIONS.md`) |
 | Site preference | Prefer **podman-edge**; Podman cannot host the Helm chart → print fallback and install on **kind-west** `skupper` (`SITE=kind-west`) |
-| Install + PF | `make ui-skupper` |
-| Validate | `make ui-skupper-check` (`curl -k -u …`) |
+| Entry | Phase C of `make ui` (fail-fast A→B→C) |
 | Access URL | Prefer `https://127.0.0.1:8443/` — helper prints `ACCESS_URL=…` (printed free port is the run contract) |
 | Auth | Chart auto-creates basic-auth (user `skupper` + random password). Printed **once** as `BASIC_AUTH_USER=` / `BASIC_AUTH_PASSWORD=` and saved under `demo/.run/ui-skupper-basic-auth` (**gitignored** — never commit) |
 | Exposure | Localhost HTTPS port-forward only — **never** CCM LoadBalancer |
@@ -77,12 +76,11 @@ See `demo/VERSIONS.md` for install pins. Offline checks validate manifests only.
 | Tear down | `make ui-down` stops PF and `helm uninstall`s the release |
 
 ```bash
-make ui-skupper
+make ui
 # === Talk UI (phase C — Skupper network-observer) ===
 # ACCESS_URL=https://127.0.0.1:8443/
 # BASIC_AUTH_USER=skupper
 # BASIC_AUTH_PASSWORD=<printed-once>
-make ui-skupper-check
 ```
 
 Values live in `demo/skupper/network-observer/values.yaml` (no password in git).

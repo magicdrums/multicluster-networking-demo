@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Focused offline suite for demo-product-uis WU3 (Phase C observer + teardown threats).
-# Includes threat-matrix RED checks from design: CCM ports, bad CLUSTER, up has no ui-, PF pidfiles.
+# Offline suite: Phase C observer + teardown via make ui surface (Kind-free).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,12 +10,12 @@ SKUPPER_README="${ROOT}/demo/skupper/README.md"
 VALUES="${ROOT}/demo/skupper/network-observer/values.yaml"
 CHECK_SKUPPER="${SCRIPT_DIR}/check-skupper.sh"
 UI_COMMON="${SCRIPT_DIR}/ui-common.sh"
-UI_SKUPPER="${SCRIPT_DIR}/ui-skupper.sh"
-UI_CHECK="${SCRIPT_DIR}/ui-skupper-check.sh"
+PHASE_A="${SCRIPT_DIR}/ui/_phase_a.sh"
+PHASE_B="${SCRIPT_DIR}/ui/_phase_b.sh"
+PHASE_C="${SCRIPT_DIR}/ui/_phase_c.sh"
+UI_SH="${SCRIPT_DIR}/ui.sh"
 UI_DOWN="${SCRIPT_DIR}/ui-down.sh"
 DOWN_SH="${SCRIPT_DIR}/down.sh"
-UI_APP="${SCRIPT_DIR}/ui-app.sh"
-UI_LINKERD="${SCRIPT_DIR}/ui-linkerd.sh"
 
 pass=0
 fail=0
@@ -115,7 +114,6 @@ assert_output_contains() {
   pass=$((pass + 1))
 }
 
-# --- 5.1 (3) / foundation: up has no ui-* deps ---
 up_recipe="$(awk '/^up:/{flag=1; next} /^[^[:space:]#]/{flag=0} flag' "${MAKEFILE}")"
 if grep -E 'ui-' <<<"${up_recipe}" >/dev/null 2>&1; then
   printf 'FAIL: Makefile up recipe references ui-*\n'
@@ -125,11 +123,32 @@ else
   pass=$((pass + 1))
 fi
 
-assert_ok "make -n ui-skupper dry-runs" make -C "${ROOT}" -n ui-skupper
-assert_ok "make -n ui-skupper-check dry-runs" make -C "${ROOT}" -n ui-skupper-check
+if grep -Eiq 'network-observer|_phase_c|ui-skupper' "${SCRIPT_DIR}/up.sh"; then
+  printf 'FAIL: up.sh appears to install observer / Phase C\n'
+  fail=$((fail + 1))
+else
+  printf 'PASS: up.sh does not install observer\n'
+  pass=$((pass + 1))
+fi
+
+assert_ok "make -n ui dry-runs" make -C "${ROOT}" -n ui
 assert_ok "make -n ui-down dry-runs" make -C "${ROOT}" -n ui-down
 
-# --- Helm values present; no password committed ---
+if [[ -f "${PHASE_C}" ]]; then
+  printf 'PASS: phase C private script present\n'
+  pass=$((pass + 1))
+else
+  printf 'FAIL: missing %s\n' "${PHASE_C}"
+  fail=$((fail + 1))
+fi
+if [[ -e "${SCRIPT_DIR}/ui-skupper.sh" || -e "${SCRIPT_DIR}/ui-skupper-check.sh" ]]; then
+  printf 'FAIL: old ui-skupper*.sh still present\n'
+  fail=$((fail + 1))
+else
+  printf 'PASS: old ui-skupper*.sh removed\n'
+  pass=$((pass + 1))
+fi
+
 assert_file_contains \
   "network-observer values exist" \
   "auth:" \
@@ -165,8 +184,8 @@ assert_file_contains \
   "${VERSIONS}"
 
 assert_file_contains \
-  "skupper README documents ui-skupper" \
-  "make ui-skupper" \
+  "skupper README documents make ui Phase C" \
+  "make ui" \
   "${SKUPPER_README}"
 assert_file_contains \
   "skupper README HTTPS URL contract" \
@@ -181,19 +200,18 @@ assert_file_contains \
   "kind-west" \
   "${SKUPPER_README}"
 
-# Script contracts
 assert_file_contains \
-  "ui-skupper prints ACCESS_URL contract style" \
+  "phase C prints ACCESS_URL contract style" \
   "ACCESS_URL" \
-  "${UI_SKUPPER}"
+  "${PHASE_C}"
 assert_file_contains \
-  "ui-skupper prefers 8443" \
+  "phase C prefers 8443" \
   "8443" \
-  "${UI_SKUPPER}"
+  "${PHASE_C}"
 assert_file_contains \
-  "ui-skupper-check uses curl -k" \
+  "phase C uses curl -k for probe" \
   "curl -k" \
-  "${UI_CHECK}"
+  "${PHASE_C}"
 assert_file_contains \
   "ui-down uninstalls observer" \
   "helm uninstall" \
@@ -207,23 +225,21 @@ assert_file_contains \
   "ui-down" \
   "${DOWN_SH}"
 
-# --- 5.1 (2) bad CLUSTER aborts ---
 assert_fails_with \
-  "ui-skupper refuses CLUSTER=kind-cluster" \
+  "phase C refuses CLUSTER=kind-cluster" \
   "refusing|allowlist|kind-cluster" \
-  env CLUSTER=kind-cluster "${UI_SKUPPER}"
+  env CLUSTER=kind-cluster "${PHASE_C}"
 
 assert_fails_with \
-  "ui-skupper-check refuses CLUSTER=kind-cluster" \
+  "ui PHASE=c refuses CLUSTER=kind-cluster" \
   "refusing|allowlist|kind-cluster" \
-  env CLUSTER=kind-cluster "${UI_CHECK}"
+  env CLUSTER=kind-cluster PHASE=c "${UI_SH}"
 
 assert_fails_with \
   "ui-down refuses CLUSTER=kind-cluster" \
   "refusing|allowlist|kind-cluster" \
   env CLUSTER=kind-cluster "${UI_DOWN}"
 
-# --- 5.1 (1) ui-down leaves CCM ports — script must document + not kill CCM ---
 assert_file_contains \
   "ui-down documents CCM ports untouched" \
   "8080/8081/18080/18081/45671/55671" \
@@ -236,53 +252,79 @@ else
   pass=$((pass + 1))
 fi
 
-# --- 5.1 (4) ui-down kills only recorded PF pids (pidfile-driven) ---
 assert_file_contains \
-  "ui-down uses pidfiles for PF stop" \
-  "demo_ui_pidfile" \
+  "ui-down uses shared PF stop helper" \
+  "demo_ui_stop_pf" \
   "${UI_DOWN}"
+assert_file_contains \
+  "ui-common records PF pid+port" \
+  "demo_ui_record_pf" \
+  "${UI_COMMON}"
+assert_file_contains \
+  "ui-common port-fallback stop" \
+  "trying port fallback" \
+  "${UI_COMMON}"
 # shellcheck disable=SC1091
 source "${UI_COMMON}"
 run_dir="$(demo_ui_ensure_run_dir)"
 fake_pidfile="$(demo_ui_pidfile ui-skupper-observer)"
-# Record a dead pid that is not our shell — ui-down must only consult pidfile.
+fake_portfile="$(demo_ui_portfile ui-skupper-observer)"
 printf '1\n' >"${fake_pidfile}"
+printf '8443\n' >"${fake_portfile}"
 out="$(CLUSTER= "${UI_DOWN}" 2>&1 || true)"
-if [[ -f "${fake_pidfile}" ]]; then
-  printf 'FAIL: ui-down did not remove observer pidfile after run\n'
+if [[ -f "${fake_pidfile}" || -f "${fake_portfile}" ]]; then
+  printf 'FAIL: ui-down did not remove observer pid/port files after run\n'
   fail=$((fail + 1))
 else
-  printf 'PASS: ui-down clears recorded observer pidfile\n'
+  printf 'PASS: ui-down clears recorded observer pid/port files\n'
   pass=$((pass + 1))
 fi
-if grep -qE 'ui-skupper-observer|Skupper network-observer|pidfile stale' <<<"${out}"; then
-  printf 'PASS: ui-down reports observer PF teardown from pidfile\n'
+if grep -qE 'ui-skupper-observer|Skupper network-observer|pidfile stale|port fallback' <<<"${out}"; then
+  printf 'PASS: ui-down reports observer PF teardown\n'
   pass=$((pass + 1))
 else
   printf 'FAIL: ui-down did not mention observer PF teardown\n'
   printf '  output: %s\n' "${out}"
   fail=$((fail + 1))
 fi
-rm -f "${fake_pidfile}"
+rm -f "${fake_pidfile}" "${fake_portfile}"
 
-# --- Rehearsal offline URL contracts A→B→C ---
+# Port-fallback path: no pidfile, portfile present (verify warning regression).
+printf '8443\n' >"$(demo_ui_portfile ui-skupper-observer)"
+out_fb="$(CLUSTER= "${UI_DOWN}" 2>&1 || true)"
+if [[ -f "$(demo_ui_portfile ui-skupper-observer)" ]]; then
+  printf 'FAIL: ui-down left observer portfile after fallback path\n'
+  fail=$((fail + 1))
+else
+  printf 'PASS: ui-down clears observer portfile on fallback path\n'
+  pass=$((pass + 1))
+fi
+if grep -q 'port fallback' <<<"${out_fb}"; then
+  printf 'PASS: ui-down reports port fallback when pidfile missing\n'
+  pass=$((pass + 1))
+else
+  printf 'FAIL: ui-down did not report port fallback\n'
+  printf '  output: %s\n' "${out_fb}"
+  fail=$((fail + 1))
+fi
+rm -f "$(demo_ui_portfile ui-skupper-observer)"
+
 assert_output_contains \
   "Phase A ACCESS_URL contract" \
   "ACCESS_URL=http://emojivoto.demo.local:8080/" \
-  "${UI_APP}"
+  env UI_SKIP_PROBE=1 "${PHASE_A}"
 
 assert_file_contains \
   "Phase B script prefers 50750 URL shape" \
   "http://127.0.0.1:" \
-  "${UI_LINKERD}"
+  "${PHASE_B}"
 
 assert_file_contains \
   "Phase C script builds https://127.0.0.1 URL" \
   "https://127.0.0.1:" \
-  "${UI_SKUPPER}"
+  "${PHASE_C}"
 
-# Prefer exact preferred-port string in ui-skupper for speaker contract
-if grep -qE 'https://127\.0\.0\.1:\$\{port\}/|PREFERRED_PORT=.*8443' "${UI_SKUPPER}"; then
+if grep -qE 'https://127\.0\.0\.1:\$\{port\}/|PREFERRED_PORT=.*8443' "${PHASE_C}"; then
   printf 'PASS: Phase C prefers port 8443 for ACCESS_URL\n'
   pass=$((pass + 1))
 else
@@ -290,26 +332,24 @@ else
   fail=$((fail + 1))
 fi
 
-# --- Verify PARTIAL close: VAN works without observer ---
-# default make up / demo-skupper path must not require ui-skupper
 demo_skupper_recipe="$(awk '/^demo-skupper:/{flag=1; next} /^[^[:space:]#]/{flag=0} flag' "${MAKEFILE}")"
-if grep -E 'ui-skupper' <<<"${demo_skupper_recipe}" >/dev/null 2>&1; then
-  printf 'FAIL: Makefile demo-skupper recipe references ui-skupper\n'
+if grep -E 'ui-skupper|[^a-z]ui[^a-z]' <<<"${demo_skupper_recipe}" >/dev/null 2>&1; then
+  printf 'FAIL: Makefile demo-skupper recipe references ui\n'
   printf '  recipe: %s\n' "${demo_skupper_recipe}"
   fail=$((fail + 1))
 else
-  printf 'PASS: Makefile demo-skupper has no ui-skupper dep\n'
+  printf 'PASS: Makefile demo-skupper has no ui dep\n'
   pass=$((pass + 1))
 fi
 assert_file_contains \
   "demo-skupper invokes check-skupper (VAN path)" \
   "check-skupper.sh" \
   "${MAKEFILE}"
-if grep -Eiq 'ui-skupper|network-observer' "${CHECK_SKUPPER}"; then
-  printf 'FAIL: check-skupper.sh requires ui-skupper / network-observer\n'
+if grep -Eiq 'ui-skupper|network-observer|_phase_c' "${CHECK_SKUPPER}"; then
+  printf 'FAIL: check-skupper.sh requires observer / Phase C\n'
   fail=$((fail + 1))
 else
-  printf 'PASS: check-skupper.sh has no ui-skupper / observer dependency\n'
+  printf 'PASS: check-skupper.sh has no observer dependency\n'
   pass=$((pass + 1))
 fi
 assert_file_contains \

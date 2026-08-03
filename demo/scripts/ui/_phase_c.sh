@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Phase C — opt-in Skupper network-observer. Not part of make up.
+# Invoked by demo/scripts/ui.sh. Not a public Make target.
+# Phase C (private) — Skupper network-observer. Not part of make up.
 # Prefer podman-edge; Helm chart requires Kubernetes → fallback west `skupper`.
 # HTTPS PF prefer 8443; print ACCESS_URL + basic-auth once (demo/.run/, gitignored).
+# Merged start+validate (observer HTTPS + basic-auth once).
 # Never uses CCM LB. Does not change skip-inject / VAN wiring.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1091
-source "${SCRIPT_DIR}/ui-common.sh"
+source "${SCRIPT_DIR}/../ui-common.sh"
 
 OBSERVER_CHART="${UI_SKUPPER_CHART:-oci://quay.io/skupper/helm/network-observer}"
 OBSERVER_VERSION="${UI_SKUPPER_VERSION:-2.2.1}"
@@ -34,18 +36,7 @@ demo_ui_site_file() {
 }
 
 stop_existing_pf() {
-  local pidfile pid
-  pidfile="$(demo_ui_pidfile "${PID_NAME}")"
-  if [[ ! -f "${pidfile}" ]]; then
-    return 0
-  fi
-  pid="$(tr -d '[:space:]' <"${pidfile}" || true)"
-  if [[ -n "${pid}" ]] && kill -0 "${pid}" 2>/dev/null; then
-    printf 'ui-skupper: stopping previous observer PF pid %s\n' "${pid}"
-    kill "${pid}" 2>/dev/null || true
-    wait "${pid}" 2>/dev/null || true
-  fi
-  rm -f "${pidfile}"
+  demo_ui_stop_pf "Skupper network-observer" "${PID_NAME}" "${PREFERRED_PORT}" "${URL_FILE_NAME}" || true
 }
 
 # Prefer podman-edge when explicitly forced or as first choice; Helm needs Kind.
@@ -65,8 +56,8 @@ resolve_install_site() {
 
   case "${preferred}" in
     podman-edge)
-      printf 'ui-skupper: prefer SITE=podman-edge — Helm chart cannot install on Podman Skupper site\n' >&2
-      printf 'ui-skupper: falling back to SITE=kind-west namespace %s\n' "${NAMESPACE}" >&2
+      printf 'ui phase C: prefer SITE=podman-edge — Helm chart cannot install on Podman Skupper site\n' >&2
+      printf 'ui phase C: falling back to SITE=kind-west namespace %s\n' "${NAMESPACE}" >&2
       printf 'kind-west\n'
       ;;
     kind-west)
@@ -128,9 +119,9 @@ ctx="$(demo_kind_context "${site}")"
 demo_ui_ensure_run_dir >/dev/null
 printf '%s\n' "${site}" >"$(demo_ui_site_file)"
 
-printf 'ui-skupper: installing network-observer %s on SITE=%s ns=%s (context %s)\n' \
+printf 'ui phase C: installing network-observer %s on SITE=%s ns=%s (context %s)\n' \
   "${OBSERVER_VERSION}" "${site}" "${NAMESPACE}" "${ctx}"
-printf 'ui-skupper: chart %s — never CCM LB; bundled Prometheus OK (2nd Prom / RAM note in VERSIONS)\n' \
+printf 'ui phase C: chart %s — never CCM LB; bundled Prometheus OK (2nd Prom / RAM note in VERSIONS)\n' \
   "${OBSERVER_CHART}"
 
 helm upgrade --install "${RELEASE_NAME}" "${OBSERVER_CHART}" \
@@ -142,7 +133,7 @@ helm upgrade --install "${RELEASE_NAME}" "${OBSERVER_CHART}" \
   --wait \
   --timeout "${WAIT_TIMEOUT}"
 
-printf 'ui-skupper: waiting for deployment/%s ready\n' "${RELEASE_NAME}"
+printf 'ui phase C: waiting for deployment/%s ready\n' "${RELEASE_NAME}"
 kubectl --context "${ctx}" -n "${NAMESPACE}" \
   rollout status "deployment/${RELEASE_NAME}" --timeout="${WAIT_TIMEOUT}"
 
@@ -159,14 +150,14 @@ access_url="https://127.0.0.1:${port}/"
 
 stop_existing_pf
 
-printf 'ui-skupper: starting HTTPS PF 127.0.0.1:%s → svc/%s:443 (no CCM LB)\n' \
+printf 'ui phase C: starting HTTPS PF 127.0.0.1:%s → svc/%s:443 (no CCM LB)\n' \
   "${port}" "${RELEASE_NAME}"
 kubectl --context "${ctx}" -n "${NAMESPACE}" port-forward \
   "service/${RELEASE_NAME}" "${port}:443" \
   --address 127.0.0.1 \
   >"$(demo_ui_run_dir)/ui-skupper-observer.log" 2>&1 &
 pf_pid=$!
-printf '%s\n' "${pf_pid}" >"$(demo_ui_pidfile "${PID_NAME}")"
+demo_ui_record_pf "${PID_NAME}" "${pf_pid}" "${port}" || exit 1
 printf '%s\n' "${access_url}" >"$(demo_ui_access_url_file)"
 
 ready=0
@@ -195,5 +186,4 @@ demo_print_access_url "phase C — Skupper network-observer" "${access_url}" \
   "BASIC_AUTH_PASSWORD=${auth_pass}" \
   "BASIC_AUTH_FILE=${auth_file}" \
   "access: localhost HTTPS port-forward only — never CCM LB" \
-  "validate: make ui-skupper-check" \
   "teardown: make ui-down"

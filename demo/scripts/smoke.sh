@@ -4,8 +4,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=common.sh
-source "${SCRIPT_DIR}/common.sh"
+# shellcheck source=lib/common.sh
+source "${SCRIPT_DIR}/lib/common.sh"
 
 ROOT="$(demo_repo_root)"
 DEMO_HOST="${DEMO_HOST:-emojivoto.demo.local}"
@@ -60,7 +60,7 @@ offline_smoke() {
   printf 'smoke: offline path (no kind-west) — scripts + pins + allowlist\n'
   require_file "${ROOT}/demo/scripts/smoke.sh"
   require_file "${ROOT}/demo/scripts/failover.sh"
-  require_file "${ROOT}/demo/scripts/cloud-provider-kind.sh"
+  require_file "${ROOT}/demo/scripts/lib/cloud-provider-kind.sh"
   require_file "${ROOT}/demo/scripts/demo-ratelimit.sh"
   require_file "${ROOT}/demo/scripts/check-east-west.sh"
   require_file "${ROOT}/demo/scripts/check-skupper.sh"

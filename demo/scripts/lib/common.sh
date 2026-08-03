@@ -9,7 +9,8 @@ DEMO_ALLOWLIST=(kind-west kind-east podman-edge)
 
 demo_repo_root() {
   local here
-  here="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+  # This file lives at demo/scripts/lib/common.sh → three levels up is repo root.
+  here="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
   printf '%s\n' "${here}"
 }
 
