@@ -67,6 +67,8 @@ Local LB is **cloud-provider-kind** with `--enable-lb-port-mapping` (not MetalLB
 
 ## Talk UIs (opt-in — not part of `make up`)
 
+**Talk deck** (scripts, Gemini prompts, speaker cards): [`openspec/changes/kcd-ba-talk-deck/`](openspec/changes/kcd-ba-talk-deck/).
+
 One public entry: **`make ui`**. It always starts **app (A) → Linkerd Viz (B) → Skupper observer (C)** — each start+validate + `ACCESS_URL` — and **fails fast** if a phase fails (later phases do not start). There is no public single-phase Make target. Critical-path success remains RateLimit, mesh, Skupper, and failover — UIs are optional.
 
 This demo does **not** install Kuadrant Grafana, Envoy admin, Kiali, or Kubernetes Dashboard.

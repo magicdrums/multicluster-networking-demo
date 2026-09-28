@@ -184,3 +184,7 @@ Hacer **antes** del talk (no cuenta en el reloj de 30 min).
 ### Post-rehearsal / teardown (opcional)
 
 - [ ] `make down` (best-effort `ui-down`, solo sitios demo)
+
+### Offline packaging check (WU2)
+
+- [x] 12 slides + owners A=Francisco / B=Sergio; hybrid ES+EN; Make cues 7–10; CTA `up`→`smoke`→optional `ui`→`down`; no `kind-cluster` operate; demo-stack specs untouched (see `tasks.md` 3.2)
