@@ -67,7 +67,7 @@ Local LB is **cloud-provider-kind** with `--enable-lb-port-mapping` (not MetalLB
 
 ## Talk UIs (opt-in — not part of `make up`)
 
-**Talk deck** (scripts, Gemini prompts, speaker cards): [`openspec/changes/archive/2026-09-28-kcd-ba-talk-deck/`](openspec/changes/archive/2026-09-28-kcd-ba-talk-deck/).
+**Talk deck** (scripts, Gemini prompts, speaker cards): [`openspec/changes/archive/2026-09-28-kcd-ba-talk-deck/`](openspec/changes/archive/2026-09-28-kcd-ba-talk-deck/). Stage cue cheat sheet + agent recording runbook: [`openspec/changes/kcd-ba-demo-backup/`](openspec/changes/kcd-ba-demo-backup/) (`stage-commands.md`, `recording-runbook.md`). Backup videos live only at `/home/fmeneses/Videos/kcd-ba-demo-backup/` (outside git; no video/PPTX binaries or proprietary RH PPTX in the repo).
 
 One public entry: **`make ui`**. It always starts **app (A) → Linkerd Viz (B) → Skupper observer (C)** — each start+validate + `ACCESS_URL` — and **fails fast** if a phase fails (later phases do not start). There is no public single-phase Make target. Critical-path success remains RateLimit, mesh, Skupper, and failover — UIs are optional.
 

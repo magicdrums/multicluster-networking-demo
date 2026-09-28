@@ -8,6 +8,14 @@
 demo/.run/*
 !demo/.run/.gitkeep
 
+# Accidental local media (backup recordings live outside git:
+# /home/fmeneses/Videos/kcd-ba-demo-backup/ — never commit these)
+*.cast
+*.mp4
+*.webm
+*.gif
+Videos/
+
 # Editor / OS noise
 *.swp
 *~
