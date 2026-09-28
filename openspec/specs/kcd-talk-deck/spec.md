@@ -54,9 +54,9 @@ Live blocks MUST cue `demo-skupper` (B), `demo-mesh` (B), `demo-ratelimit`→HTT
 - WHEN continuing
 - THEN UI MAY be skipped; Make critical path remains valid
 
-### Requirement: Failover live primary with offline video backup
+### Requirement: Live cues with per-cue offline video backup
 
-Failover MUST be live via `make failover`. Backup video MUST exist for flakes and MUST stay outside git. After ~2m failure/timeout MUST stop, acknowledge prior smoke, and advance (video and/or takeaways).
+Critical-path cues (`demo-skupper`, `demo-mesh`, `demo-ratelimit`→429, `failover`) MUST be live-first. Backup media MUST cover those wow moments (and MAY cover optional UI A/B/C), MUST stay outside git (host path such as `/home/fmeneses/Videos/kcd-ba-demo-backup/`), and SHOULD be agent-recorded (CLI asciinema/`script` and/or Playwright `recordVideo`, silent). After ~2m failure/timeout speakers MUST stop, acknowledge prior smoke, play the matching clip when available, and advance (takeaways if needed).
 
 #### Scenario: Live-first failover
 
@@ -64,11 +64,17 @@ Failover MUST be live via `make failover`. Backup video MUST exist for flakes an
 - WHEN failover is demonstrated
 - THEN primary path is live `make failover`
 
-#### Scenario: Video contingency outside git
+#### Scenario: Per-cue video contingency outside git
 
-- GIVEN live failover flakes
-- WHEN falling back
-- THEN backup video is used outside the repo; no video binary is committed
+- GIVEN a live critical-path cue flakes
+- WHEN falling back within ~2 minutes
+- THEN the matching outside-git clip for that cue is used; no video binary is committed
+
+#### Scenario: Agent-recorded silent media
+
+- GIVEN rehearsal recording of backup clips
+- WHEN media is produced
+- THEN capture is CLI and/or Playwright video without microphone, written outside the git worktree
 
 ### Requirement: Source and binary policy
 
