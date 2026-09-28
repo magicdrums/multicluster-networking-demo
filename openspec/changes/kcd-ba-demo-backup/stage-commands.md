@@ -8,7 +8,16 @@
 
 Prefer Make over ad-hoc YAML on stage. Live first; if a cue stalls **≤ ~2 minutes**, abandon → play the matching clip → advance.
 
-Cross-link: [recording-runbook.md](./recording-runbook.md) · helpers: `demo/scripts/record-talk-backup/`
+**Hilo conductor (guion ↔ grabación por slide):** [`talk-conductor.md`](./talk-conductor.md) · Cards: [`speaker-cards.md`](./speaker-cards.md) · Runbook: [`recording-runbook.md`](./recording-runbook.md) · helpers: `demo/scripts/record-talk-backup/`
+
+### Slide ↔ clip (resumen)
+
+| Slide | Live | Backup file |
+|------:|------|-------------|
+| 7 | `make demo-skupper` | `kcd-ba-01-skupper.cast` (+ opc. `07-ui-c.webm`) |
+| 8 | `make demo-mesh` | `kcd-ba-02-mesh.cast` (+ opc. `06-ui-b.webm`) |
+| 9 | `make demo-ratelimit` | `kcd-ba-03-ratelimit-429.cast` (+ opc. `05-ui-a.webm`) |
+| 10 | `make failover` | `kcd-ba-04-failover.cast` |
 
 ---
 
