@@ -9,6 +9,8 @@ Repo: [fmenesesg/multicluster-networking-demo](https://github.com/fmenesesg/mult
 ## Quick start
 
 ```bash
+make install            # host CLIs/pins → ~/.local/bin (+ podman/inotify if needed); runs prereq-check
+export PATH="$HOME/.local/bin:$PATH"   # so pins win over any system Helm/kubectl
 make prereq-check       # optional; make up already runs this
 make up                 # stack only (no UIs) — re-run is idempotent
 make smoke              # 200/429, mesh, Skupper, dig
